@@ -5,13 +5,13 @@ KeyboardとGamepadを統一的に扱うTypeScriptライブラリ
 ## Install
 
 ```bash
-npm install @あなたの名前/digital-input
+npm install @ipota/input
 ```
 
 ## Usage
 
 ```ts
-import { DigitalInput } from "@あなたの名前/digital-input"
+import { DigitalInput } from "@ipota/input"
 
 const input = new DigitalInput({
     left: ["ArrowLeft", "gamepad-axis-0-negative"],
