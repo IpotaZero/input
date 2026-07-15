@@ -1,3 +1,4 @@
+import { ConfigString } from "./KeyCode";
 export type DigitalInputReader<Action extends string> = {
     isPressed(action: Action): boolean;
     isReleased(action: Action): boolean;
@@ -25,7 +26,7 @@ export declare class DigitalInput<Action extends string> {
     private isPaused;
     pause(reason: string): void;
     resume(reason: string): void;
-    constructor(config: Record<Action, readonly string[]>);
+    constructor(config: Record<Action, readonly ConfigString[]>);
     /**
      * フレームの最後に呼び出す。
      */

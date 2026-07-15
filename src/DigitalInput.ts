@@ -1,3 +1,5 @@
+import { ConfigString } from "./KeyCode"
+
 export type DigitalInputReader<Action extends string> = {
     isPressed(action: Action): boolean
     isReleased(action: Action): boolean
@@ -19,7 +21,7 @@ export class DigitalInput<Action extends string> {
     // （アクション単位ではなくコード単位で保持することで、
     //   同じアクションに複数のコードが割り当てられているときに
     //   片方を離しただけでアクション全体がOFFになるのを防ぐ）
-    private readonly pressedCodes = new Set<string>()
+    private readonly pressedCodes = new Set<ConfigString>()
 
     // こちらは従来通りアクション単位の「今フレームで新たに押された/離された」エッジ集合
     private readonly released = new Set<Action>()
@@ -28,8 +30,8 @@ export class DigitalInput<Action extends string> {
     private readonly ac = new AbortController()
 
     private readonly disableReasons = new Set<string>()
-    private readonly config = new Map<Action, readonly string[]>()
-    private readonly codeToActions = new Map<string, Action[]>()
+    private readonly config = new Map<Action, readonly ConfigString[]>()
+    private readonly codeToActions = new Map<ConfigString, Action[]>()
 
     private isPaused(): boolean {
         return this.disableReasons.size > 0
@@ -43,10 +45,10 @@ export class DigitalInput<Action extends string> {
         this.disableReasons.delete(reason)
     }
 
-    constructor(config: Record<Action, readonly string[]>) {
+    constructor(config: Record<Action, readonly ConfigString[]>) {
         const entries = Object.entries(config)
 
-        for (const [action, codes] of entries as Iterable<[Action, readonly string[]]>) {
+        for (const [action, codes] of entries as Iterable<[Action, readonly ConfigString[]]>) {
             this.config.set(action, [...codes])
 
             for (const code of codes) {
@@ -80,7 +82,8 @@ export class DigitalInput<Action extends string> {
 
     private processGamepadInput(gamepad: Gamepad) {
         gamepad.buttons.forEach((button, index) => {
-            const code = `gamepad-button-${index}`
+            const code: ConfigString = `gamepad-button-${index}`
+
             if (!this.codeToActions.has(code)) return
 
             if (button.pressed) {
@@ -91,8 +94,8 @@ export class DigitalInput<Action extends string> {
         })
 
         gamepad.axes.forEach((axis, index) => {
-            const positiveCode = `gamepad-axis-${index}-positive`
-            const negativeCode = `gamepad-axis-${index}-negative`
+            const positiveCode: ConfigString = `gamepad-axis-${index}-positive`
+            const negativeCode: ConfigString = `gamepad-axis-${index}-negative`
             if (!this.codeToActions.has(positiveCode) && !this.codeToActions.has(negativeCode)) return
 
             if (axis > 0.5) {
@@ -149,19 +152,19 @@ export class DigitalInput<Action extends string> {
 
     private onKeyDown = (e: KeyboardEvent) => {
         if (this.isPaused()) return
-        if (!this.codeToActions.has(e.code)) return
+        if (!this.codeToActions.has(e.code as ConfigString)) return
 
-        this.press(e.code)
+        this.press(e.code as ConfigString)
     }
 
     private onKeyUp = (e: KeyboardEvent) => {
         if (this.isPaused()) return
-        if (!this.codeToActions.has(e.code)) return
+        if (!this.codeToActions.has(e.code as ConfigString)) return
 
-        this.release(e.code)
+        this.release(e.code as ConfigString)
     }
 
-    private press(code: string) {
+    private press(code: ConfigString) {
         if (this.pressedCodes.has(code)) return
 
         const actions = this.codeToActions.get(code)
@@ -179,7 +182,7 @@ export class DigitalInput<Action extends string> {
         console.log(this.pushed)
     }
 
-    private release(code: string) {
+    private release(code: ConfigString) {
         if (!this.pressedCodes.has(code)) return
 
         this.pressedCodes.delete(code)
