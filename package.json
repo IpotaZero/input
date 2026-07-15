@@ -14,7 +14,8 @@
         "dist"
     ],
     "scripts": {
-        "build": "tsc"
+        "build": "tsc",
+        "update": "npm version patch && npm publish"
     },
     "devDependencies": {
         "typescript": "^5.8.0"
