@@ -5,7 +5,7 @@ import { Keys } from "./KeyCode";
 export type AnalogKeyboardSource = {
     type: "keyboard";
     positive: Keys;
-    negative: Keys;
+    negative?: Keys;
 };
 /**
  * ゲームパッドのアナログ軸（スティック等）を読み取るソース。

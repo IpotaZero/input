@@ -6,7 +6,7 @@ import { Keys } from "./KeyCode"
 export type AnalogKeyboardSource = {
     type: "keyboard"
     positive: Keys
-    negative: Keys
+    negative?: Keys
 }
 
 /**
@@ -150,7 +150,7 @@ export class AnalogInput<Action extends string> implements AnalogInputReader<Act
 
     private readKeyboard(source: AnalogKeyboardSource): number {
         const positive = this.pressedKeys.has(source.positive)
-        const negative = this.pressedKeys.has(source.negative)
+        const negative = source.negative ? this.pressedKeys.has(source.negative) : false
 
         if (positive && !negative) return 1
         if (negative && !positive) return -1
