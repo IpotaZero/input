@@ -15,7 +15,7 @@ export type DigitalInputReader<Action extends string> = {
  * 基本的にシングルトンとして使うことを想定している。
  * アプリはメインループを持つ。
  */
-export declare class DigitalInput<Action extends string> {
+export declare class DigitalInput<Action extends string> implements DigitalInputReader<Action> {
     private readonly pressedCodes;
     private readonly released;
     private readonly pushed;
