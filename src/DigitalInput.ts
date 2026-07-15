@@ -16,7 +16,7 @@ export type DigitalInputReader<Action extends string> = {
  * 基本的にシングルトンとして使うことを想定している。
  * アプリはメインループを持つ。
  */
-export class DigitalInput<Action extends string> {
+export class DigitalInput<Action extends string> implements DigitalInputReader<Action> {
     // 実際に押されているキーコード/ゲームパッドコードの集合
     // （アクション単位ではなくコード単位で保持することで、
     //   同じアクションに複数のコードが割り当てられているときに
