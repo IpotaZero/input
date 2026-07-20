@@ -32,6 +32,9 @@ export class TouchTracker {
         element.addEventListener("touchend", this.clearState, { signal });
         element.addEventListener("touchcancel", this.clearState, { signal });
     }
+    touchesCount() {
+        return this.currentTouches?.length ?? 0;
+    }
     getCurrentTouches() {
         return this.currentTouches;
     }

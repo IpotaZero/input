@@ -20,6 +20,7 @@ export declare class TouchTracker {
     private prevY;
     private currentTouches;
     constructor(element: HTMLElement);
+    touchesCount(): number;
     getCurrentTouches(): TouchList | undefined;
     /**
      * 前回 getDelta() を呼んだ時点からの移動量を返す。
