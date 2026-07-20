@@ -44,10 +44,12 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
 
     pause(reason: string): void {
         this.disableReasons.add(reason)
+        console.log("DigitalInput is paused because of reasons:", this.disableReasons)
     }
 
     resume(reason: string): void {
         this.disableReasons.delete(reason)
+        console.log("DigitalInput is paused because of reasons:", this.disableReasons)
     }
 
     updateConfig(config: DigitalInput.Config<Action>) {
@@ -79,11 +81,6 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
     update() {
         this.pushed.clear()
         this.released.clear()
-
-        if (this.isPaused()) {
-            console.log("DigitalInput is paused because of reasons:", this.disableReasons)
-            return
-        }
     }
 
     dispose() {
@@ -185,6 +182,7 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
 
     private onKeyDown = (e: KeyboardEvent) => {
         if (this.isPaused()) return
+
         if (!this.codeToActions.has(e.code as ConfigString)) return
 
         this.press(e.code as ConfigString)

@@ -26,9 +26,11 @@ export class DigitalInput {
     }
     pause(reason) {
         this.disableReasons.add(reason);
+        console.log("DigitalInput is paused because of reasons:", this.disableReasons);
     }
     resume(reason) {
         this.disableReasons.delete(reason);
+        console.log("DigitalInput is paused because of reasons:", this.disableReasons);
     }
     updateConfig(config) {
         this.config.clear();
@@ -54,10 +56,6 @@ export class DigitalInput {
     update() {
         this.pushed.clear();
         this.released.clear();
-        if (this.isPaused()) {
-            console.log("DigitalInput is paused because of reasons:", this.disableReasons);
-            return;
-        }
     }
     dispose() {
         this.ac.abort();
