@@ -26,6 +26,6 @@ export declare class TouchTracker {
      */
     getDelta(): TouchTracker.Delta | null;
     /** イベントリスナーを一括解除してリソースを解放する */
-    remove(): void;
+    dispose(): void;
     private readonly clearState;
 }

@@ -67,6 +67,7 @@ export declare class AnalogInput<Action extends string> implements AnalogInput.R
     private isPaused;
     pause(reason: string): void;
     resume(reason: string): void;
+    updateConfig(config: AnalogInput.Config<Action>): void;
     constructor(config: AnalogInput.Config<Action>);
     /**
      * フレームの最後に呼び出す。

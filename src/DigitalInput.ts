@@ -50,7 +50,10 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
         this.disableReasons.delete(reason)
     }
 
-    constructor(config: DigitalInput.Config<Action>) {
+    updateConfig(config: DigitalInput.Config<Action>) {
+        this.config.clear()
+        this.codeToActions.clear()
+
         const entries = Object.entries(config)
 
         for (const [action, codes] of entries as Iterable<[Action, readonly ConfigString[]]>) {
@@ -62,7 +65,10 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
                 this.codeToActions.set(code, actions)
             }
         }
+    }
 
+    constructor(config: DigitalInput.Config<Action>) {
+        this.updateConfig(config)
         window.addEventListener("keydown", this.onKeyDown, { signal: this.ac.signal })
         window.addEventListener("keyup", this.onKeyUp, { signal: this.ac.signal })
     }
@@ -83,6 +89,10 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
             .getGamepads()
             ?.filter((gamepad) => !!gamepad)
             .forEach((gamepad) => this.processGamepadInput(gamepad))
+    }
+
+    dispose() {
+        this.ac.abort()
     }
 
     private processGamepadInput(gamepad: Gamepad) {

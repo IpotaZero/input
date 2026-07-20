@@ -29,11 +29,13 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
     private isPaused;
     pause(reason: string): void;
     resume(reason: string): void;
+    updateConfig(config: DigitalInput.Config<Action>): void;
     constructor(config: DigitalInput.Config<Action>);
     /**
      * フレームの最後に呼び出す。
      */
     update(): void;
+    dispose(): void;
     private processGamepadInput;
     isPressed(action: Action): boolean;
     isReleased(action: Action): boolean;

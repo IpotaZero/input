@@ -87,11 +87,16 @@ export class AnalogInput<Action extends string> implements AnalogInput.Reader<Ac
         this.disableReasons.delete(reason)
     }
 
-    constructor(config: AnalogInput.Config<Action>) {
+    updateConfig(config: AnalogInput.Config<Action>) {
+        this.config.clear()
+
         for (const [action, sources] of Object.entries(config) as Iterable<[Action, readonly AnalogInput.Source[]]>) {
             this.config.set(action, [...sources])
         }
+    }
 
+    constructor(config: AnalogInput.Config<Action>) {
+        this.updateConfig(config)
         window.addEventListener("keydown", this.onKeyDown, { signal: this.ac.signal })
         window.addEventListener("keyup", this.onKeyUp, { signal: this.ac.signal })
     }

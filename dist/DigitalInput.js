@@ -30,7 +30,9 @@ export class DigitalInput {
     resume(reason) {
         this.disableReasons.delete(reason);
     }
-    constructor(config) {
+    updateConfig(config) {
+        this.config.clear();
+        this.codeToActions.clear();
         const entries = Object.entries(config);
         for (const [action, codes] of entries) {
             this.config.set(action, [...codes]);
@@ -40,6 +42,9 @@ export class DigitalInput {
                 this.codeToActions.set(code, actions);
             }
         }
+    }
+    constructor(config) {
+        this.updateConfig(config);
         window.addEventListener("keydown", this.onKeyDown, { signal: this.ac.signal });
         window.addEventListener("keyup", this.onKeyUp, { signal: this.ac.signal });
     }
@@ -57,6 +62,9 @@ export class DigitalInput {
             .getGamepads()
             ?.filter((gamepad) => !!gamepad)
             .forEach((gamepad) => this.processGamepadInput(gamepad));
+    }
+    dispose() {
+        this.ac.abort();
     }
     processGamepadInput(gamepad) {
         gamepad.buttons.forEach((button, index) => {

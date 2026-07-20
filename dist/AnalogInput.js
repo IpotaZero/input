@@ -33,10 +33,14 @@ export class AnalogInput {
     resume(reason) {
         this.disableReasons.delete(reason);
     }
-    constructor(config) {
+    updateConfig(config) {
+        this.config.clear();
         for (const [action, sources] of Object.entries(config)) {
             this.config.set(action, [...sources]);
         }
+    }
+    constructor(config) {
+        this.updateConfig(config);
         window.addEventListener("keydown", this.onKeyDown, { signal: this.ac.signal });
         window.addEventListener("keyup", this.onKeyUp, { signal: this.ac.signal });
     }

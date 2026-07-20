@@ -47,7 +47,7 @@ export class TouchTracker {
         return { x: dx, y: dy };
     }
     /** イベントリスナーを一括解除してリソースを解放する */
-    remove() {
+    dispose() {
         this.ac.abort();
         this.clearState();
     }
