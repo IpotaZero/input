@@ -18,13 +18,15 @@ export declare class TouchTracker {
     private latestY;
     private prevX;
     private prevY;
+    private currentTouches;
     constructor(element: HTMLElement);
+    getCurrentTouches(): TouchList | undefined;
     /**
      * 前回 getDelta() を呼んだ時点からの移動量を返す。
      * タッチ中でなければ null。
      * 毎フレーム(rAFループ内)で呼ぶことを想定している。
      */
-    getDelta(): TouchTracker.Delta | null;
+    getDelta(): TouchTracker.Delta | undefined;
     /** イベントリスナーを一括解除してリソースを解放する */
     dispose(): void;
     private readonly clearState;

@@ -18,12 +18,14 @@ export class TouchTracker {
     private readonly ac = new AbortController()
 
     // touchmove で随時上書きされる「最新」の座標
-    private latestX: number | null = null
-    private latestY: number | null = null
+    private latestX: number | undefined = undefined
+    private latestY: number | undefined = undefined
 
     // getDelta() 呼び出しごとに更新される「前フレーム時点」の座標
-    private prevX: number | null = null
-    private prevY: number | null = null
+    private prevX: number | undefined = undefined
+    private prevY: number | undefined = undefined
+
+    private currentTouches: TouchList | undefined = undefined
 
     constructor(element: HTMLElement) {
         const { signal } = this.ac
@@ -31,6 +33,8 @@ export class TouchTracker {
         element.addEventListener(
             "touchstart",
             (e: TouchEvent) => {
+                this.currentTouches = e.touches
+
                 const t = e.touches[0]
                 this.prevX = this.latestX = t.clientX
                 this.prevY = this.latestY = t.clientY
@@ -41,6 +45,8 @@ export class TouchTracker {
         element.addEventListener(
             "touchmove",
             (e: TouchEvent) => {
+                this.currentTouches = e.touches
+
                 const t = e.touches[0]
                 this.latestX = t.clientX
                 this.latestY = t.clientY
@@ -52,16 +58,20 @@ export class TouchTracker {
         element.addEventListener("touchcancel", this.clearState, { signal })
     }
 
+    getCurrentTouches() {
+        return this.currentTouches
+    }
+
     /**
      * 前回 getDelta() を呼んだ時点からの移動量を返す。
      * タッチ中でなければ null。
      * 毎フレーム(rAFループ内)で呼ぶことを想定している。
      */
-    getDelta(): TouchTracker.Delta | null {
+    getDelta(): TouchTracker.Delta | undefined {
         const { latestX, latestY, prevX, prevY } = this
 
-        if (latestX === null || latestY === null || prevX === null || prevY === null) {
-            return null
+        if (latestX === undefined || latestY === undefined || prevX === undefined || prevY === undefined) {
+            return undefined
         }
 
         const dx = latestX - prevX
@@ -81,6 +91,7 @@ export class TouchTracker {
     }
 
     private readonly clearState = (): void => {
-        this.prevX = this.prevY = this.latestX = this.latestY = null
+        this.currentTouches = undefined
+        this.prevX = this.prevY = this.latestX = this.latestY = undefined
     }
 }

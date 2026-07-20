@@ -9,25 +9,31 @@
 export class TouchTracker {
     ac = new AbortController();
     // touchmove で随時上書きされる「最新」の座標
-    latestX = null;
-    latestY = null;
+    latestX = undefined;
+    latestY = undefined;
     // getDelta() 呼び出しごとに更新される「前フレーム時点」の座標
-    prevX = null;
-    prevY = null;
+    prevX = undefined;
+    prevY = undefined;
+    currentTouches = undefined;
     constructor(element) {
         const { signal } = this.ac;
         element.addEventListener("touchstart", (e) => {
+            this.currentTouches = e.touches;
             const t = e.touches[0];
             this.prevX = this.latestX = t.clientX;
             this.prevY = this.latestY = t.clientY;
         }, { passive: true, signal });
         element.addEventListener("touchmove", (e) => {
+            this.currentTouches = e.touches;
             const t = e.touches[0];
             this.latestX = t.clientX;
             this.latestY = t.clientY;
         }, { passive: true, signal });
         element.addEventListener("touchend", this.clearState, { signal });
         element.addEventListener("touchcancel", this.clearState, { signal });
+    }
+    getCurrentTouches() {
+        return this.currentTouches;
     }
     /**
      * 前回 getDelta() を呼んだ時点からの移動量を返す。
@@ -36,8 +42,8 @@ export class TouchTracker {
      */
     getDelta() {
         const { latestX, latestY, prevX, prevY } = this;
-        if (latestX === null || latestY === null || prevX === null || prevY === null) {
-            return null;
+        if (latestX === undefined || latestY === undefined || prevX === undefined || prevY === undefined) {
+            return undefined;
         }
         const dx = latestX - prevX;
         const dy = latestY - prevY;
@@ -52,6 +58,7 @@ export class TouchTracker {
         this.clearState();
     }
     clearState = () => {
-        this.prevX = this.prevY = this.latestX = this.latestY = null;
+        this.currentTouches = undefined;
+        this.prevX = this.prevY = this.latestX = this.latestY = undefined;
     };
 }
