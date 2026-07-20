@@ -1,45 +1,49 @@
 import { Keys } from "./KeyCode"
 
-/**
- * キーボードの2キーを +1 / -1 の軸として扱うソース。
- */
-export type AnalogKeyboardSource = {
-    type: "keyboard"
-    positive: Keys
-    negative?: Keys
-}
+export namespace AnalogInput {
+    /**
+     * キーボードの2キーを +1 / -1 の軸として扱うソース。
+     */
+    export type KeyboardSource = {
+        type: "keyboard"
+        positive: Keys
+        negative?: Keys
+    }
 
-/**
- * ゲームパッドのアナログ軸（スティック等）を読み取るソース。
- * threshold未満の入力はデッドゾーンとして0に丸められる。
- * scalarは出力にかける倍率（最終的に-1〜1にクランプされる）。
- * invertを立てると符号を反転する。
- */
-export type AnalogAxisSource = {
-    type: "gamepad-axis"
-    axis: number
-    threshold?: number
-    scalar?: number
-    invert?: boolean
-}
+    /**
+     * ゲームパッドのアナログ軸（スティック等）を読み取るソース。
+     * threshold未満の入力はデッドゾーンとして0に丸められる。
+     * scalarは出力にかける倍率（最終的に-1〜1にクランプされる）。
+     * invertを立てると符号を反転する。
+     */
+    export type AxisSource = {
+        type: "gamepad-axis"
+        axis: number
+        threshold?: number
+        scalar?: number
+        invert?: boolean
+    }
 
-/**
- * ゲームパッドのボタン（アナログトリガー等）を読み取るソース。
- * positiveボタンの値をそのまま+方向、negativeボタンの値を-方向として扱い、
- * 両方指定されている場合は positive - negative を最終値とする。
- */
-export type AnalogButtonSource = {
-    type: "gamepad-button"
-    positive: number
-    negative?: number
-    threshold?: number
-    scalar?: number
-}
+    /**
+     * ゲームパッドのボタン（アナログトリガー等）を読み取るソース。
+     * positiveボタンの値をそのまま+方向、negativeボタンの値を-方向として扱い、
+     * 両方指定されている場合は positive - negative を最終値とする。
+     */
+    export type ButtonSource = {
+        type: "gamepad-button"
+        positive: number
+        negative?: number
+        threshold?: number
+        scalar?: number
+    }
 
-export type AnalogSource = AnalogKeyboardSource | AnalogAxisSource | AnalogButtonSource
+    export type Source = KeyboardSource | AxisSource | ButtonSource
 
-export type AnalogInputReader<Action extends string> = {
-    getValue(action: Action): number
+    export type Reader<Action extends string> = {
+        getValue(action: Action): number
+    }
+
+    export type Config<Action extends string> = Record<Action, readonly AnalogInput.Source[]>
 }
 
 /**
@@ -61,8 +65,8 @@ export type AnalogInputReader<Action extends string> = {
  * 基本的にシングルトンとして使うことを想定している。
  * アプリはメインループを持つ。
  */
-export class AnalogInput<Action extends string> implements AnalogInputReader<Action> {
-    private readonly config = new Map<Action, readonly AnalogSource[]>()
+export class AnalogInput<Action extends string> implements AnalogInput.Reader<Action> {
+    private readonly config = new Map<Action, readonly AnalogInput.Source[]>()
     private readonly values = new Map<Action, number>()
 
     // 実際に押されているキーボードのコードの集合
@@ -83,8 +87,8 @@ export class AnalogInput<Action extends string> implements AnalogInputReader<Act
         this.disableReasons.delete(reason)
     }
 
-    constructor(config: Record<Action, readonly AnalogSource[]>) {
-        for (const [action, sources] of Object.entries(config) as Iterable<[Action, readonly AnalogSource[]]>) {
+    constructor(config: AnalogInput.Config<Action>) {
+        for (const [action, sources] of Object.entries(config) as Iterable<[Action, readonly AnalogInput.Source[]]>) {
             this.config.set(action, [...sources])
         }
 
@@ -137,7 +141,7 @@ export class AnalogInput<Action extends string> implements AnalogInputReader<Act
         this.ac.abort()
     }
 
-    private readSource(source: AnalogSource, gamepads: readonly Gamepad[]): number {
+    private readSource(source: AnalogInput.Source, gamepads: readonly Gamepad[]): number {
         switch (source.type) {
             case "keyboard":
                 return this.readKeyboard(source)
@@ -148,7 +152,7 @@ export class AnalogInput<Action extends string> implements AnalogInputReader<Act
         }
     }
 
-    private readKeyboard(source: AnalogKeyboardSource): number {
+    private readKeyboard(source: AnalogInput.KeyboardSource): number {
         const positive = this.pressedKeys.has(source.positive)
         const negative = source.negative ? this.pressedKeys.has(source.negative) : false
 
@@ -157,7 +161,7 @@ export class AnalogInput<Action extends string> implements AnalogInputReader<Act
         return 0
     }
 
-    private readGamepadAxis(source: AnalogAxisSource, gamepads: readonly Gamepad[]): number {
+    private readGamepadAxis(source: AnalogInput.AxisSource, gamepads: readonly Gamepad[]): number {
         const threshold = source.threshold ?? 0.1
         const scalar = source.scalar ?? 1
         const invert = source.invert ?? false
@@ -179,7 +183,7 @@ export class AnalogInput<Action extends string> implements AnalogInputReader<Act
         return this.clamp(signed * scalar)
     }
 
-    private readGamepadButton(source: AnalogButtonSource, gamepads: readonly Gamepad[]): number {
+    private readGamepadButton(source: AnalogInput.ButtonSource, gamepads: readonly Gamepad[]): number {
         const threshold = source.threshold ?? 0
         const scalar = source.scalar ?? 1
 

@@ -1,41 +1,44 @@
 import { Keys } from "./KeyCode";
-/**
- * キーボードの2キーを +1 / -1 の軸として扱うソース。
- */
-export type AnalogKeyboardSource = {
-    type: "keyboard";
-    positive: Keys;
-    negative?: Keys;
-};
-/**
- * ゲームパッドのアナログ軸（スティック等）を読み取るソース。
- * threshold未満の入力はデッドゾーンとして0に丸められる。
- * scalarは出力にかける倍率（最終的に-1〜1にクランプされる）。
- * invertを立てると符号を反転する。
- */
-export type AnalogAxisSource = {
-    type: "gamepad-axis";
-    axis: number;
-    threshold?: number;
-    scalar?: number;
-    invert?: boolean;
-};
-/**
- * ゲームパッドのボタン（アナログトリガー等）を読み取るソース。
- * positiveボタンの値をそのまま+方向、negativeボタンの値を-方向として扱い、
- * 両方指定されている場合は positive - negative を最終値とする。
- */
-export type AnalogButtonSource = {
-    type: "gamepad-button";
-    positive: number;
-    negative?: number;
-    threshold?: number;
-    scalar?: number;
-};
-export type AnalogSource = AnalogKeyboardSource | AnalogAxisSource | AnalogButtonSource;
-export type AnalogInputReader<Action extends string> = {
-    getValue(action: Action): number;
-};
+export declare namespace AnalogInput {
+    /**
+     * キーボードの2キーを +1 / -1 の軸として扱うソース。
+     */
+    type KeyboardSource = {
+        type: "keyboard";
+        positive: Keys;
+        negative?: Keys;
+    };
+    /**
+     * ゲームパッドのアナログ軸（スティック等）を読み取るソース。
+     * threshold未満の入力はデッドゾーンとして0に丸められる。
+     * scalarは出力にかける倍率（最終的に-1〜1にクランプされる）。
+     * invertを立てると符号を反転する。
+     */
+    type AxisSource = {
+        type: "gamepad-axis";
+        axis: number;
+        threshold?: number;
+        scalar?: number;
+        invert?: boolean;
+    };
+    /**
+     * ゲームパッドのボタン（アナログトリガー等）を読み取るソース。
+     * positiveボタンの値をそのまま+方向、negativeボタンの値を-方向として扱い、
+     * 両方指定されている場合は positive - negative を最終値とする。
+     */
+    type ButtonSource = {
+        type: "gamepad-button";
+        positive: number;
+        negative?: number;
+        threshold?: number;
+        scalar?: number;
+    };
+    type Source = KeyboardSource | AxisSource | ButtonSource;
+    type Reader<Action extends string> = {
+        getValue(action: Action): number;
+    };
+    type Config<Action extends string> = Record<Action, readonly AnalogInput.Source[]>;
+}
 /**
  * キーボードとゲームパッドのアナログ入力（軸/トリガー）を統一的に扱うためのクラス。
  *
@@ -55,7 +58,7 @@ export type AnalogInputReader<Action extends string> = {
  * 基本的にシングルトンとして使うことを想定している。
  * アプリはメインループを持つ。
  */
-export declare class AnalogInput<Action extends string> implements AnalogInputReader<Action> {
+export declare class AnalogInput<Action extends string> implements AnalogInput.Reader<Action> {
     private readonly config;
     private readonly values;
     private readonly pressedKeys;
@@ -64,7 +67,7 @@ export declare class AnalogInput<Action extends string> implements AnalogInputRe
     private isPaused;
     pause(reason: string): void;
     resume(reason: string): void;
-    constructor(config: Record<Action, readonly AnalogSource[]>);
+    constructor(config: AnalogInput.Config<Action>);
     /**
      * フレームの最後に呼び出す。
      */

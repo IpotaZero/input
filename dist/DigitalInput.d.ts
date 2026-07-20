@@ -1,10 +1,13 @@
 import { ConfigString } from "./KeyCode";
-export type DigitalInputReader<Action extends string> = {
-    isPressed(action: Action): boolean;
-    isReleased(action: Action): boolean;
-    isPushed(action: Action): boolean;
-    isSomethingPressed(): boolean;
-};
+export declare namespace DigitalInput {
+    type Reader<Action extends string> = {
+        isPressed(action: Action): boolean;
+        isReleased(action: Action): boolean;
+        isPushed(action: Action): boolean;
+        isSomethingPressed(): boolean;
+    };
+    type Config<Action extends string> = Record<Action, readonly ConfigString[]>;
+}
 /**
  * e.codeまたは、ゲームパッドのボタン/軸に対応する文字列をアクションに割り当てることで、
  * キーボードとゲームパッドの入力を統一的に扱えるようにする。
@@ -15,7 +18,7 @@ export type DigitalInputReader<Action extends string> = {
  * 基本的にシングルトンとして使うことを想定している。
  * アプリはメインループを持つ。
  */
-export declare class DigitalInput<Action extends string> implements DigitalInputReader<Action> {
+export declare class DigitalInput<Action extends string> implements DigitalInput.Reader<Action> {
     private readonly pressedCodes;
     private readonly released;
     private readonly pushed;
@@ -26,7 +29,7 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
     private isPaused;
     pause(reason: string): void;
     resume(reason: string): void;
-    constructor(config: Record<Action, readonly ConfigString[]>);
+    constructor(config: DigitalInput.Config<Action>);
     /**
      * フレームの最後に呼び出す。
      */
