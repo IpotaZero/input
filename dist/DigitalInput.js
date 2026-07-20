@@ -58,10 +58,6 @@ export class DigitalInput {
             console.log("DigitalInput is paused because of reasons:", this.disableReasons);
             return;
         }
-        navigator
-            .getGamepads()
-            ?.filter((gamepad) => !!gamepad)
-            .forEach((gamepad) => this.processGamepadInput(gamepad));
     }
     dispose() {
         this.ac.abort();
@@ -97,24 +93,43 @@ export class DigitalInput {
             }
         });
     }
+    /**押されているか? */
     isPressed(action) {
         if (this.isPaused())
             return false;
+        navigator
+            .getGamepads()
+            ?.filter((gamepad) => !!gamepad)
+            .forEach((gamepad) => this.processGamepadInput(gamepad));
         return this.isActionPressed(action);
     }
+    /**ちょうどこのフレームに離されたか? */
     isReleased(action) {
         if (this.isPaused())
             return false;
+        navigator
+            .getGamepads()
+            ?.filter((gamepad) => !!gamepad)
+            .forEach((gamepad) => this.processGamepadInput(gamepad));
         return this.released.has(action);
     }
+    /**ちょうどこのフレームに押されたか? */
     isPushed(action) {
         if (this.isPaused())
             return false;
+        navigator
+            .getGamepads()
+            ?.filter((gamepad) => !!gamepad)
+            .forEach((gamepad) => this.processGamepadInput(gamepad));
         return this.pushed.has(action);
     }
     isSomethingPressed() {
         if (this.isPaused())
             return false;
+        navigator
+            .getGamepads()
+            ?.filter((gamepad) => !!gamepad)
+            .forEach((gamepad) => this.processGamepadInput(gamepad));
         return this.pressedCodes.size > 0;
     }
     clear() {

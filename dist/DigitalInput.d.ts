@@ -37,8 +37,11 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
     update(): void;
     dispose(): void;
     private processGamepadInput;
+    /**押されているか? */
     isPressed(action: Action): boolean;
+    /**ちょうどこのフレームに離されたか? */
     isReleased(action: Action): boolean;
+    /**ちょうどこのフレームに押されたか? */
     isPushed(action: Action): boolean;
     isSomethingPressed(): boolean;
     clear(): void;

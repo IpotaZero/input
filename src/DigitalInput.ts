@@ -84,11 +84,6 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
             console.log("DigitalInput is paused because of reasons:", this.disableReasons)
             return
         }
-
-        navigator
-            .getGamepads()
-            ?.filter((gamepad) => !!gamepad)
-            .forEach((gamepad) => this.processGamepadInput(gamepad))
     }
 
     dispose() {
@@ -126,26 +121,49 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
         })
     }
 
+    /**押されているか? */
     isPressed(action: Action): boolean {
         if (this.isPaused()) return false
+
+        navigator
+            .getGamepads()
+            ?.filter((gamepad) => !!gamepad)
+            .forEach((gamepad) => this.processGamepadInput(gamepad))
 
         return this.isActionPressed(action)
     }
 
+    /**ちょうどこのフレームに離されたか? */
     isReleased(action: Action): boolean {
         if (this.isPaused()) return false
+
+        navigator
+            .getGamepads()
+            ?.filter((gamepad) => !!gamepad)
+            .forEach((gamepad) => this.processGamepadInput(gamepad))
 
         return this.released.has(action)
     }
 
+    /**ちょうどこのフレームに押されたか? */
     isPushed(action: Action): boolean {
         if (this.isPaused()) return false
+
+        navigator
+            .getGamepads()
+            ?.filter((gamepad) => !!gamepad)
+            .forEach((gamepad) => this.processGamepadInput(gamepad))
 
         return this.pushed.has(action)
     }
 
     isSomethingPressed(): boolean {
         if (this.isPaused()) return false
+
+        navigator
+            .getGamepads()
+            ?.filter((gamepad) => !!gamepad)
+            .forEach((gamepad) => this.processGamepadInput(gamepad))
 
         return this.pressedCodes.size > 0
     }
