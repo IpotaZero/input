@@ -5,6 +5,7 @@ export declare namespace DigitalInput {
         isReleased(action: Action): boolean;
         isPushed(action: Action): boolean;
         isSomethingPressed(): boolean;
+        isSomethingPushed(): boolean;
     };
     type Config<Action extends string> = Record<Action, readonly ConfigString[]>;
 }
@@ -44,6 +45,7 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
     /**ちょうどこのフレームに押されたか? */
     isPushed(action: Action): boolean;
     isSomethingPressed(): boolean;
+    isSomethingPushed(): boolean;
     clear(): void;
     private isActionPressed;
     private onKeyDown;

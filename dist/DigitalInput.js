@@ -130,6 +130,15 @@ export class DigitalInput {
             .forEach((gamepad) => this.processGamepadInput(gamepad));
         return this.pressedCodes.size > 0;
     }
+    isSomethingPushed() {
+        if (this.isPaused())
+            return false;
+        navigator
+            .getGamepads()
+            .filter((gamepad) => !!gamepad)
+            .forEach((gamepad) => this.processGamepadInput(gamepad));
+        return this.pushed.size > 0;
+    }
     clear() {
         this.pressedCodes.clear();
         this.released.clear();

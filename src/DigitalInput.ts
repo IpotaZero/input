@@ -6,6 +6,7 @@ export namespace DigitalInput {
         isReleased(action: Action): boolean
         isPushed(action: Action): boolean
         isSomethingPressed(): boolean
+        isSomethingPushed(): boolean
     }
 
     export type Config<Action extends string> = Record<Action, readonly ConfigString[]>
@@ -163,6 +164,17 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
             .forEach((gamepad) => this.processGamepadInput(gamepad))
 
         return this.pressedCodes.size > 0
+    }
+
+    isSomethingPushed(): boolean {
+        if (this.isPaused()) return false
+
+        navigator
+            .getGamepads()
+            .filter((gamepad) => !!gamepad)
+            .forEach((gamepad) => this.processGamepadInput(gamepad))
+
+        return this.pushed.size > 0
     }
 
     clear(): void {
