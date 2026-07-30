@@ -17,6 +17,8 @@ export class DigitalInput {
     // こちらは従来通りアクション単位の「今フレームで新たに押された/離された」エッジ集合
     released = new Set();
     pushed = new Set();
+    // isRepeatPushed用: アクションごとに「次にパルスを発生させる時刻」を保持する
+    repeatNextFireAt = new Map();
     ac = new AbortController();
     disableReasons = new Set();
     config = new Map();
@@ -95,54 +97,70 @@ export class DigitalInput {
     isPressed(action) {
         if (this.isPaused())
             return false;
-        navigator
-            .getGamepads()
-            ?.filter((gamepad) => !!gamepad)
-            .forEach((gamepad) => this.processGamepadInput(gamepad));
+        this.updateGamepadState();
         return this.isActionPressed(action);
     }
     /**ちょうどこのフレームに離されたか? */
     isReleased(action) {
         if (this.isPaused())
             return false;
-        navigator
-            .getGamepads()
-            ?.filter((gamepad) => !!gamepad)
-            .forEach((gamepad) => this.processGamepadInput(gamepad));
+        this.updateGamepadState();
         return this.released.has(action);
     }
     /**ちょうどこのフレームに押されたか? */
     isPushed(action) {
         if (this.isPaused())
             return false;
-        navigator
-            .getGamepads()
-            ?.filter((gamepad) => !!gamepad)
-            .forEach((gamepad) => this.processGamepadInput(gamepad));
+        this.updateGamepadState();
         return this.pushed.has(action);
     }
     isSomethingPressed() {
         if (this.isPaused())
             return false;
-        navigator
-            .getGamepads()
-            ?.filter((gamepad) => !!gamepad)
-            .forEach((gamepad) => this.processGamepadInput(gamepad));
+        this.updateGamepadState();
         return this.pressedCodes.size > 0;
     }
     isSomethingPushed() {
         if (this.isPaused())
             return false;
-        navigator
-            .getGamepads()
-            .filter((gamepad) => !!gamepad)
-            .forEach((gamepad) => this.processGamepadInput(gamepad));
+        this.updateGamepadState();
         return this.pushed.size > 0;
+    }
+    /**
+     * 押しっぱなしの間、一定間隔(intervalMs)ごとにtrueを返す(いわゆるキーリピート/オートリピート)。
+     * 「ガ・ガガガガガ」のように、最初の1発はinitialDelayMs後、以降はintervalMsごとに発生する。
+     *
+     * 例: isRepeatPushed("attack", 100, 400)
+     *   → 押した瞬間に1回true、その400ms後にもう1回true、以降100ms間隔でtrueを返し続ける
+     *
+     * 毎フレーム呼び出して使うこと。離す/他のコードで押され続けていない状態になるとリセットされる。
+     */
+    isRepeatPushed(action, intervalMs, initialDelayMs = intervalMs) {
+        if (this.isPaused())
+            return false;
+        this.updateGamepadState();
+        if (!this.isActionPressed(action)) {
+            this.repeatNextFireAt.delete(action);
+            return false;
+        }
+        const now = performance.now();
+        const nextFireAt = this.repeatNextFireAt.get(action);
+        // 新規プレス(このメソッドとしては初回)なので最初の「ガ」を発生させる
+        if (nextFireAt === undefined) {
+            this.repeatNextFireAt.set(action, now + initialDelayMs);
+            return true;
+        }
+        if (now >= nextFireAt) {
+            this.repeatNextFireAt.set(action, now + intervalMs);
+            return true;
+        }
+        return false;
     }
     clear() {
         this.pressedCodes.clear();
         this.released.clear();
         this.pushed.clear();
+        this.repeatNextFireAt.clear();
     }
     // アクションに割り当てられたコードのうち、どれか一つでも
     // 押されていればそのアクションは「押されている」とみなす
@@ -194,5 +212,11 @@ export class DigitalInput {
                 }
             }
         }
+    }
+    updateGamepadState() {
+        navigator
+            .getGamepads()
+            ?.filter((gamepad) => !!gamepad)
+            .forEach((gamepad) => this.processGamepadInput(gamepad));
     }
 }

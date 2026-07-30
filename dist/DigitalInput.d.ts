@@ -6,6 +6,12 @@ export declare namespace DigitalInput {
         isPushed(action: Action): boolean;
         isSomethingPressed(): boolean;
         isSomethingPushed(): boolean;
+        /**
+         * 押しっぱなしの間、一定間隔(intervalMs)ごとにtrueを返す(いわゆるキーリピート/オートリピート)。
+         * 「ガ・ガガガガガ」のように、最初の1発はinitialDelayMs後、以降はintervalMsごとに発生する。
+         * 毎フレーム呼び出して使う。
+         */
+        isRepeatPushed(action: Action, intervalMs: number, initialDelayMs?: number): boolean;
     };
     type Config<Action extends string> = Record<Action, readonly ConfigString[]>;
 }
@@ -23,6 +29,7 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
     private readonly pressedCodes;
     private readonly released;
     private readonly pushed;
+    private readonly repeatNextFireAt;
     private readonly ac;
     private readonly disableReasons;
     private readonly config;
@@ -46,10 +53,21 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
     isPushed(action: Action): boolean;
     isSomethingPressed(): boolean;
     isSomethingPushed(): boolean;
+    /**
+     * 押しっぱなしの間、一定間隔(intervalMs)ごとにtrueを返す(いわゆるキーリピート/オートリピート)。
+     * 「ガ・ガガガガガ」のように、最初の1発はinitialDelayMs後、以降はintervalMsごとに発生する。
+     *
+     * 例: isRepeatPushed("attack", 100, 400)
+     *   → 押した瞬間に1回true、その400ms後にもう1回true、以降100ms間隔でtrueを返し続ける
+     *
+     * 毎フレーム呼び出して使うこと。離す/他のコードで押され続けていない状態になるとリセットされる。
+     */
+    isRepeatPushed(action: Action, intervalMs: number, initialDelayMs?: number): boolean;
     clear(): void;
     private isActionPressed;
     private onKeyDown;
     private onKeyUp;
     private press;
     private release;
+    private updateGamepadState;
 }
