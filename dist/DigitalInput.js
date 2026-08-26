@@ -139,7 +139,7 @@ export class DigitalInput {
      *
      * 毎フレーム呼び出して使うこと。離す/他のコードで押され続けていない状態になるとリセットされる。
      */
-    isRepeatPushed(action, intervalMs = 50, initialDelayMs = 500) {
+    isRepeatPushed(action, intervalMs = 100, initialDelayMs = 400) {
         if (this.isPaused())
             return false;
         if (!this.isActionPressed(action)) {

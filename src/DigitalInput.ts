@@ -89,15 +89,7 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
     }
 
     /**
-     * 毎フレーム、呼び出し元(アプリのメインループ)から呼ぶ。呼び出し元が何をしていようと関係なく必ず呼ばれる、という点がポイント。
-     *
-     * ゲームパッドはkeydown/keyupのようなイベントを持たないため、ここでのポーリングでしか状態を
-     * 検知できない。isPressed()等の呼び出しタイミングに便乗して更新する方式だと、呼び出し側が
-     * しばらく呼んでくれない期間(pause中など)に状態追跡が完全に止まってしまい、その間の押下/解放を
-     * 取りこぼした結果、後から辻褄が合わなくなる(新規pushの誤検知など)。
-     * ここで一元的に、呼び出し側の都合に依存せず毎フレーム確実にポーリングすることで、
-     * キーボードのイベントリスナーと同じく「物理的な状態変化と同期してpress()/release()が呼ばれる」
-     * という性質になり、キーボードとゲームパッドの挙動を一致させられる。
+     * 毎フレームの終わりに呼ぶ。
      */
     update() {
         this.pushed.clear()
@@ -182,7 +174,7 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
      *
      * 毎フレーム呼び出して使うこと。離す/他のコードで押され続けていない状態になるとリセットされる。
      */
-    isRepeatPushed(action: Action, intervalMs: number = 50, initialDelayMs: number = 500): boolean {
+    isRepeatPushed(action: Action, intervalMs: number = 100, initialDelayMs: number = 400): boolean {
         if (this.isPaused()) return false
 
         if (!this.isActionPressed(action)) {
