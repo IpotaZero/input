@@ -21,6 +21,10 @@ export class DigitalInput {
     // isRepeatPushed用: アクションごとに「次にパルスを発生させる時刻」を保持する
     repeatNextFireAt = new Map();
     ac = new AbortController();
+    // ゲームパッドの状態を常時ポーリングするrAFループのID。
+    // キーボードの keydown/keyup イベントリスナーと対等な「呼び出し側に依存しない状態追跡」を
+    // ゲームパッドにも持たせるために、コンストラクタで開始しdisposeで止める。
+    gamepadPollRafId = null;
     disableReasons = new Set();
     config = new Map();
     codeToActions = new Map();
@@ -51,6 +55,23 @@ export class DigitalInput {
         this.updateConfig(config);
         window.addEventListener("keydown", this.onKeyDown, { signal: this.ac.signal });
         window.addEventListener("keyup", this.onKeyUp, { signal: this.ac.signal });
+        this.startGamepadPolling();
+    }
+    /**
+     * ゲームパッドはkeydown/keyupのようなイベントを持たないため、代わりにrAFで毎フレーム
+     * 状態をポーリングし続ける。isPressed()等の呼び出しタイミングに便乗して更新する方式だと、
+     * 呼び出し側がしばらく呼んでくれない期間(pause中など)に状態追跡が完全に止まってしまい、
+     * その間の押下/解放を取りこぼした結果、後から辻褄が合わなくなる(新規pushの誤検知など)。
+     * このループを常時独立で回すことで、キーボードのイベントリスナーと同じく
+     * 「呼び出し側が何をしていようと、物理的な状態変化と同期してpress()/release()が呼ばれる」
+     * という性質になり、キーボードとゲームパッドの挙動を一致させられる。
+     */
+    startGamepadPolling() {
+        const poll = () => {
+            this.updateGamepadState();
+            this.gamepadPollRafId = requestAnimationFrame(poll);
+        };
+        this.gamepadPollRafId = requestAnimationFrame(poll);
     }
     /**
      * フレームの最後に呼び出す。
@@ -61,6 +82,8 @@ export class DigitalInput {
     }
     dispose() {
         this.ac.abort();
+        if (this.gamepadPollRafId !== null)
+            cancelAnimationFrame(this.gamepadPollRafId);
     }
     processGamepadInput(gamepad) {
         gamepad.buttons.forEach((button, index) => {
@@ -95,35 +118,28 @@ export class DigitalInput {
     }
     /**押されているか? */
     isPressed(action) {
-        // pause中でも「離された」ことだけは常に反映したいので、updateGamepadStateは常に呼ぶ。
-        // 呼び出し元への報告(戻り値)だけをpause中はfalseにする。
-        this.updateGamepadState();
         if (this.isPaused())
             return false;
         return this.isActionPressed(action);
     }
     /**ちょうどこのフレームに離されたか? */
     isReleased(action) {
-        this.updateGamepadState();
         if (this.isPaused())
             return false;
         return this.released.has(action);
     }
     /**ちょうどこのフレームに押されたか? */
     isPushed(action) {
-        this.updateGamepadState();
         if (this.isPaused())
             return false;
         return this.pushed.has(action);
     }
     isSomethingPressed() {
-        this.updateGamepadState();
         if (this.isPaused())
             return false;
         return this.pressedCodes.size > 0;
     }
     isSomethingPushed() {
-        this.updateGamepadState();
         if (this.isPaused())
             return false;
         return this.pushed.size > 0;
@@ -138,7 +154,6 @@ export class DigitalInput {
      * 毎フレーム呼び出して使うこと。離す/他のコードで押され続けていない状態になるとリセットされる。
      */
     isRepeatPushed(action, intervalMs, initialDelayMs = intervalMs) {
-        this.updateGamepadState();
         if (this.isPaused())
             return false;
         if (!this.isActionPressed(action)) {
@@ -188,18 +203,23 @@ export class DigitalInput {
      * 一方releaseはpause中でも常に反映する。そうしないと、pauseした瞬間にたまたま押されていた
      * キー/ボタンが、pause中に離されたことを検知できずに「押されっぱなし」のまま固まってしまい、
      * resume後にそのキー/ボタンが二度と反応しなくなる (または離すまで別の入力として誤検知され続ける)。
+     *
+     * pause中でも物理的な押下状態そのもの(pressedCodes)は必ず記録する。キーボードのkeydown、
+     * ゲームパッドの常時ポーリング(startGamepadPolling)ともに、pause中かどうかに関わらず
+     * このpress()自体は呼ばれ続けるので、ここで記録を止めてしまうとpause解除時に
+     * 「押されっぱなしのボタン」を新規pushとして誤検知することになる。
      */
     press(code) {
         if (this.pressedCodes.has(code))
             return;
-        if (this.isPaused())
-            return;
-        const actions = this.codeToActions.get(code);
-        if (actions) {
-            for (const action of actions) {
-                // 他のコード経由で既に押されている場合は「新規に押された」扱いにしない
-                if (!this.isActionPressed(action)) {
-                    this.pushed.add(action);
+        if (!this.isPaused()) {
+            const actions = this.codeToActions.get(code);
+            if (actions) {
+                for (const action of actions) {
+                    // 他のコード経由で既に押されている場合は「新規に押された」扱いにしない
+                    if (!this.isActionPressed(action)) {
+                        this.pushed.add(action);
+                    }
                 }
             }
         }

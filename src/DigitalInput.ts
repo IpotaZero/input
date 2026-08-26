@@ -13,6 +13,8 @@ export namespace DigitalInput {
          * 毎フレーム呼び出して使う。
          */
         isRepeatPushed(action: Action, intervalMs: number, initialDelayMs?: number): boolean
+
+        clear(): void
     }
 
     export type Config<Action extends string> = Record<Action, readonly ConfigString[]>
@@ -43,6 +45,11 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
     private readonly repeatNextFireAt = new Map<Action, number>()
 
     private readonly ac = new AbortController()
+
+    // ゲームパッドの状態を常時ポーリングするrAFループのID。
+    // キーボードの keydown/keyup イベントリスナーと対等な「呼び出し側に依存しない状態追跡」を
+    // ゲームパッドにも持たせるために、コンストラクタで開始しdisposeで止める。
+    private gamepadPollRafId: number | null = null
 
     private readonly disableReasons = new Set<string>()
     private readonly config = new Map<Action, readonly ConfigString[]>()
@@ -84,6 +91,25 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
         this.updateConfig(config)
         window.addEventListener("keydown", this.onKeyDown, { signal: this.ac.signal })
         window.addEventListener("keyup", this.onKeyUp, { signal: this.ac.signal })
+
+        this.startGamepadPolling()
+    }
+
+    /**
+     * ゲームパッドはkeydown/keyupのようなイベントを持たないため、代わりにrAFで毎フレーム
+     * 状態をポーリングし続ける。isPressed()等の呼び出しタイミングに便乗して更新する方式だと、
+     * 呼び出し側がしばらく呼んでくれない期間(pause中など)に状態追跡が完全に止まってしまい、
+     * その間の押下/解放を取りこぼした結果、後から辻褄が合わなくなる(新規pushの誤検知など)。
+     * このループを常時独立で回すことで、キーボードのイベントリスナーと同じく
+     * 「呼び出し側が何をしていようと、物理的な状態変化と同期してpress()/release()が呼ばれる」
+     * という性質になり、キーボードとゲームパッドの挙動を一致させられる。
+     */
+    private startGamepadPolling(): void {
+        const poll = () => {
+            this.updateGamepadState()
+            this.gamepadPollRafId = requestAnimationFrame(poll)
+        }
+        this.gamepadPollRafId = requestAnimationFrame(poll)
     }
 
     /**
@@ -96,6 +122,7 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
 
     dispose() {
         this.ac.abort()
+        if (this.gamepadPollRafId !== null) cancelAnimationFrame(this.gamepadPollRafId)
     }
 
     private processGamepadInput(gamepad: Gamepad) {
@@ -131,10 +158,6 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
 
     /**押されているか? */
     isPressed(action: Action): boolean {
-        // pause中でも「離された」ことだけは常に反映したいので、updateGamepadStateは常に呼ぶ。
-        // 呼び出し元への報告(戻り値)だけをpause中はfalseにする。
-        this.updateGamepadState()
-
         if (this.isPaused()) return false
 
         return this.isActionPressed(action)
@@ -142,8 +165,6 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
 
     /**ちょうどこのフレームに離されたか? */
     isReleased(action: Action): boolean {
-        this.updateGamepadState()
-
         if (this.isPaused()) return false
 
         return this.released.has(action)
@@ -151,24 +172,18 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
 
     /**ちょうどこのフレームに押されたか? */
     isPushed(action: Action): boolean {
-        this.updateGamepadState()
-
         if (this.isPaused()) return false
 
         return this.pushed.has(action)
     }
 
     isSomethingPressed(): boolean {
-        this.updateGamepadState()
-
         if (this.isPaused()) return false
 
         return this.pressedCodes.size > 0
     }
 
     isSomethingPushed(): boolean {
-        this.updateGamepadState()
-
         if (this.isPaused()) return false
 
         return this.pushed.size > 0
@@ -184,8 +199,6 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
      * 毎フレーム呼び出して使うこと。離す/他のコードで押され続けていない状態になるとリセットされる。
      */
     isRepeatPushed(action: Action, intervalMs: number, initialDelayMs: number = intervalMs): boolean {
-        this.updateGamepadState()
-
         if (this.isPaused()) return false
 
         if (!this.isActionPressed(action)) {
@@ -244,17 +257,23 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
      * 一方releaseはpause中でも常に反映する。そうしないと、pauseした瞬間にたまたま押されていた
      * キー/ボタンが、pause中に離されたことを検知できずに「押されっぱなし」のまま固まってしまい、
      * resume後にそのキー/ボタンが二度と反応しなくなる (または離すまで別の入力として誤検知され続ける)。
+     *
+     * pause中でも物理的な押下状態そのもの(pressedCodes)は必ず記録する。キーボードのkeydown、
+     * ゲームパッドの常時ポーリング(startGamepadPolling)ともに、pause中かどうかに関わらず
+     * このpress()自体は呼ばれ続けるので、ここで記録を止めてしまうとpause解除時に
+     * 「押されっぱなしのボタン」を新規pushとして誤検知することになる。
      */
     private press(code: ConfigString) {
         if (this.pressedCodes.has(code)) return
-        if (this.isPaused()) return
 
-        const actions = this.codeToActions.get(code)
-        if (actions) {
-            for (const action of actions) {
-                // 他のコード経由で既に押されている場合は「新規に押された」扱いにしない
-                if (!this.isActionPressed(action)) {
-                    this.pushed.add(action)
+        if (!this.isPaused()) {
+            const actions = this.codeToActions.get(code)
+            if (actions) {
+                for (const action of actions) {
+                    // 他のコード経由で既に押されている場合は「新規に押された」扱いにしない
+                    if (!this.isActionPressed(action)) {
+                        this.pushed.add(action)
+                    }
                 }
             }
         }

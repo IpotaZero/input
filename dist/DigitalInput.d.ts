@@ -12,6 +12,7 @@ export declare namespace DigitalInput {
          * 毎フレーム呼び出して使う。
          */
         isRepeatPushed(action: Action, intervalMs: number, initialDelayMs?: number): boolean;
+        clear(): void;
     };
     type Config<Action extends string> = Record<Action, readonly ConfigString[]>;
 }
@@ -32,6 +33,7 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
     private readonly pushed;
     private readonly repeatNextFireAt;
     private readonly ac;
+    private gamepadPollRafId;
     private readonly disableReasons;
     private readonly config;
     private readonly codeToActions;
@@ -40,6 +42,16 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
     resume(reason: string): void;
     updateConfig(config: DigitalInput.Config<Action>): void;
     constructor(config: DigitalInput.Config<Action>, gamepadIndex?: number[]);
+    /**
+     * ゲームパッドはkeydown/keyupのようなイベントを持たないため、代わりにrAFで毎フレーム
+     * 状態をポーリングし続ける。isPressed()等の呼び出しタイミングに便乗して更新する方式だと、
+     * 呼び出し側がしばらく呼んでくれない期間(pause中など)に状態追跡が完全に止まってしまい、
+     * その間の押下/解放を取りこぼした結果、後から辻褄が合わなくなる(新規pushの誤検知など)。
+     * このループを常時独立で回すことで、キーボードのイベントリスナーと同じく
+     * 「呼び出し側が何をしていようと、物理的な状態変化と同期してpress()/release()が呼ばれる」
+     * という性質になり、キーボードとゲームパッドの挙動を一致させられる。
+     */
+    private startGamepadPolling;
     /**
      * フレームの最後に呼び出す。
      */
@@ -74,6 +86,11 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
      * 一方releaseはpause中でも常に反映する。そうしないと、pauseした瞬間にたまたま押されていた
      * キー/ボタンが、pause中に離されたことを検知できずに「押されっぱなし」のまま固まってしまい、
      * resume後にそのキー/ボタンが二度と反応しなくなる (または離すまで別の入力として誤検知され続ける)。
+     *
+     * pause中でも物理的な押下状態そのもの(pressedCodes)は必ず記録する。キーボードのkeydown、
+     * ゲームパッドの常時ポーリング(startGamepadPolling)ともに、pause中かどうかに関わらず
+     * このpress()自体は呼ばれ続けるので、ここで記録を止めてしまうとpause解除時に
+     * 「押されっぱなしのボタン」を新規pushとして誤検知することになる。
      */
     private press;
     private release;
