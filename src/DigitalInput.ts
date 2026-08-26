@@ -62,12 +62,19 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
         return this.disableReasons.size > 0
     }
 
+    /**
+     * 一時停止する。
+     * @param reason 停止する理由
+     */
     pause(reason: string): void {
         this.disableReasons.add(reason)
+        console.log(`input is paused because of ${reason}.`)
     }
 
+    /** pauseを解除 */
     resume(reason: string): void {
         this.disableReasons.delete(reason)
+        console.log(`input is resumed because of ${reason}.`)
     }
 
     updateConfig(config: DigitalInput.Config<Action>) {
@@ -205,6 +212,7 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
             return true
         }
 
+        // まだインターバル中の場合
         return false
     }
 
@@ -215,8 +223,9 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
         this.repeatNextFireAt.clear()
     }
 
-    // アクションに割り当てられたSourceのうち、どれか一つでも
-    // 押されていればそのアクションは「押されている」とみなす
+    /**
+     * アクションに割り当てられたSourceのうち、どれか一つでも押されていればそのアクションは「押されている」とみなす
+     */
     private isActionPressed(action: Action): boolean {
         const sources = this.config.get(action)
         if (!sources) return false
@@ -237,7 +246,6 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
 
         this.release(key)
     }
-
 
     /**
      * 新規にSourceが押されたことを記録する。pause中は「新規に押される」ことだけを無視する

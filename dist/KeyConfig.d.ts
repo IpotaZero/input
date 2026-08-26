@@ -26,4 +26,8 @@ export declare namespace KeyConfig {
  */
 export declare namespace KeyConfig {
     function waitForAnyInput(options?: KeyConfig.Options): Promise<Source>;
+    /**
+     * 指定された Source (キー/ボタン/軸) が物理的に離されるまで待つ
+     */
+    function waitForRelease(source: Source, options?: KeyConfig.Options): Promise<void>;
 }

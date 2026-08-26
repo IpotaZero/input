@@ -43,7 +43,12 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
     private readonly config;
     private readonly keyToActions;
     private isPaused;
+    /**
+     * 一時停止する。
+     * @param reason 停止する理由
+     */
     pause(reason: string): void;
+    /** pauseを解除 */
     resume(reason: string): void;
     updateConfig(config: DigitalInput.Config<Action>): void;
     constructor(config: DigitalInput.Config<Action>, gamepadIndex?: number[]);
@@ -72,6 +77,9 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
      */
     isRepeatPushed(action: Action, intervalMs?: number, initialDelayMs?: number): boolean;
     clear(): void;
+    /**
+     * アクションに割り当てられたSourceのうち、どれか一つでも押されていればそのアクションは「押されている」とみなす
+     */
     private isActionPressed;
     private onKeyDown;
     private onKeyUp;

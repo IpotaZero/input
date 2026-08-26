@@ -91,8 +91,10 @@ export namespace KeyConfig {
                             stillHeld.delete(key)
                             continue
                         }
+                        // 押しっぱなしの場合は一旦無視する
                         if (stillHeld.has(key)) continue
 
+                        // 新しく押された場合
                         finish({ ok: true, source: { type: "gamepad-button", index } })
                         return
                     }
@@ -117,6 +119,70 @@ export namespace KeyConfig {
             }
 
             rafId = requestAnimationFrame(pollGamepad)
+        })
+    }
+
+    /**
+     * 指定された Source (キー/ボタン/軸) が物理的に離されるまで待つ
+     */
+    export function waitForRelease(source: Source, options: KeyConfig.Options = {}): Promise<void> {
+        const axisThreshold = options.axisThreshold ?? 0.5
+        const buttonThreshold = options.buttonThreshold ?? 0.5
+
+        return new Promise<void>((resolve) => {
+            if (options.signal?.aborted) {
+                resolve()
+                return
+            }
+
+            // キーボードの場合: keyup イベントを待つ
+            if (source.type === "keyboard") {
+                const onKeyUp = (e: KeyboardEvent) => {
+                    if (e.code === source.code) {
+                        window.removeEventListener("keyup", onKeyUp)
+                        resolve()
+                    }
+                }
+                window.addEventListener("keyup", onKeyUp)
+                return
+            }
+
+            // ゲームパッドの場合: rAFで閾値未満になるまで監視
+            let rafId: number
+            const checkGamepad = () => {
+                let isPressed = false
+
+                for (const gamepad of navigator.getGamepads()) {
+                    if (!gamepad) continue
+
+                    if (source.type === "gamepad-button") {
+                        const btn = gamepad.buttons[source.index]
+                        if (btn && (btn.value >= buttonThreshold || btn.pressed)) {
+                            isPressed = true
+                            break
+                        }
+                    } else if (source.type === "gamepad-axis") {
+                        const val = gamepad.axes[source.index] ?? 0
+                        if (source.direction === "positive" && val >= axisThreshold) {
+                            isPressed = true
+                            break
+                        }
+                        if (source.direction === "negative" && val <= -axisThreshold) {
+                            isPressed = true
+                            break
+                        }
+                    }
+                }
+
+                if (!isPressed) {
+                    cancelAnimationFrame(rafId)
+                    resolve()
+                } else {
+                    rafId = requestAnimationFrame(checkGamepad)
+                }
+            }
+
+            rafId = requestAnimationFrame(checkGamepad)
         })
     }
 }

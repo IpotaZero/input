@@ -34,11 +34,18 @@ export class DigitalInput {
     isPaused() {
         return this.disableReasons.size > 0;
     }
+    /**
+     * 一時停止する。
+     * @param reason 停止する理由
+     */
     pause(reason) {
         this.disableReasons.add(reason);
+        console.log(`input is paused because of ${reason}.`);
     }
+    /** pauseを解除 */
     resume(reason) {
         this.disableReasons.delete(reason);
+        console.log(`input is resumed because of ${reason}.`);
     }
     updateConfig(config) {
         this.config.clear();
@@ -157,6 +164,7 @@ export class DigitalInput {
             this.repeatNextFireAt.set(action, now + intervalMs);
             return true;
         }
+        // まだインターバル中の場合
         return false;
     }
     clear() {
@@ -165,8 +173,9 @@ export class DigitalInput {
         this.pushed.clear();
         this.repeatNextFireAt.clear();
     }
-    // アクションに割り当てられたSourceのうち、どれか一つでも
-    // 押されていればそのアクションは「押されている」とみなす
+    /**
+     * アクションに割り当てられたSourceのうち、どれか一つでも押されていればそのアクションは「押されている」とみなす
+     */
     isActionPressed(action) {
         const sources = this.config.get(action);
         if (!sources)
