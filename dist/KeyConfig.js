@@ -1,4 +1,3 @@
-import { keys } from "./KeyCode";
 /**
  * キーコンフィグ画面向け: キーボードまたはゲームパッドで何らかの入力が行われるまで待ち、
  * 押された入力に対応する ConfigString (DigitalInput/AnalogInputのConfigにそのまま使える文字列) を返す。
@@ -37,8 +36,6 @@ export var KeyConfig;
             };
             options.signal?.addEventListener("abort", () => finish({ ok: false }), { signal: ac.signal });
             window.addEventListener("keydown", (e) => {
-                if (!keys.includes(e.code))
-                    return;
                 finish({ ok: true, code: e.code });
             }, { signal: ac.signal });
             // 呼び出し時点で押されている/倒されているゲームパッド入力の初期スナップショット

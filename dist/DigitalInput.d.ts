@@ -1,4 +1,4 @@
-import { ConfigString } from "./KeyCode";
+import type { ConfigString } from "./KeyCode";
 export declare namespace DigitalInput {
     type Reader<Action extends string> = {
         isPressed(action: Action): boolean;
@@ -26,6 +26,7 @@ export declare namespace DigitalInput {
  * アプリはメインループを持つ。
  */
 export declare class DigitalInput<Action extends string> implements DigitalInput.Reader<Action> {
+    private readonly gamepadIndex;
     private readonly pressedCodes;
     private readonly released;
     private readonly pushed;
@@ -38,7 +39,7 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
     pause(reason: string): void;
     resume(reason: string): void;
     updateConfig(config: DigitalInput.Config<Action>): void;
-    constructor(config: DigitalInput.Config<Action>);
+    constructor(config: DigitalInput.Config<Action>, gamepadIndex?: number[]);
     /**
      * フレームの最後に呼び出す。
      */

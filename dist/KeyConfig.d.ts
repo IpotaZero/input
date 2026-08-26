@@ -1,4 +1,4 @@
-import { ConfigString } from "./KeyCode";
+import type { ConfigString } from "./KeyCode";
 export declare namespace KeyConfig {
     type Options = {
         /** ゲームパッドの軸をpressedとみなす閾値の絶対値 (デフォルト0.5) */

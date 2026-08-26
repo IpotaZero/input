@@ -9,6 +9,7 @@
  * アプリはメインループを持つ。
  */
 export class DigitalInput {
+    gamepadIndex;
     // 実際に押されているキーコード/ゲームパッドコードの集合
     // （アクション単位ではなくコード単位で保持することで、
     //   同じアクションに複数のコードが割り当てられているときに
@@ -47,7 +48,8 @@ export class DigitalInput {
             }
         }
     }
-    constructor(config) {
+    constructor(config, gamepadIndex = [0, 1, 2, 3]) {
+        this.gamepadIndex = gamepadIndex;
         this.updateConfig(config);
         window.addEventListener("keydown", this.onKeyDown, { signal: this.ac.signal });
         window.addEventListener("keyup", this.onKeyUp, { signal: this.ac.signal });
@@ -214,9 +216,12 @@ export class DigitalInput {
         }
     }
     updateGamepadState() {
-        navigator
-            .getGamepads()
-            ?.filter((gamepad) => !!gamepad)
-            .forEach((gamepad) => this.processGamepadInput(gamepad));
+        navigator.getGamepads().forEach((gamepad, index) => {
+            if (!this.gamepadIndex.includes(index))
+                return;
+            if (!gamepad)
+                return;
+            this.processGamepadInput(gamepad);
+        });
     }
 }

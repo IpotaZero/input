@@ -18,6 +18,7 @@
  * アプリはメインループを持つ。
  */
 export class AnalogInput {
+    gamepadIndex;
     config = new Map();
     values = new Map();
     // 実際に押されているキーボードのコードの集合
@@ -39,7 +40,8 @@ export class AnalogInput {
             this.config.set(action, [...sources]);
         }
     }
-    constructor(config) {
+    constructor(config, gamepadIndex = [0, 1, 2, 3]) {
+        this.gamepadIndex = gamepadIndex;
         this.updateConfig(config);
         window.addEventListener("keydown", this.onKeyDown, { signal: this.ac.signal });
         window.addEventListener("keyup", this.onKeyUp, { signal: this.ac.signal });
@@ -53,7 +55,10 @@ export class AnalogInput {
             console.log("AnalogInput is paused because of reasons:", this.disableReasons);
             return;
         }
-        const gamepads = navigator.getGamepads()?.filter((gamepad) => !!gamepad) ?? [];
+        this.process();
+    }
+    process() {
+        const gamepads = navigator.getGamepads();
         for (const [action, sources] of this.config) {
             let best = 0;
             for (const source of sources) {
@@ -104,15 +109,19 @@ export class AnalogInput {
         const scalar = source.scalar ?? 1;
         const invert = source.invert ?? false;
         let best = 0;
-        for (const gamepad of gamepads) {
+        gamepads.forEach((gamepad, index) => {
+            if (!this.gamepadIndex.includes(index))
+                return;
+            if (!gamepad)
+                return;
             const raw = gamepad.axes[source.axis];
             if (raw === undefined)
-                continue;
+                return;
             const applied = Math.abs(raw) < threshold ? 0 : raw;
             if (Math.abs(applied) > Math.abs(best)) {
                 best = applied;
             }
-        }
+        });
         const signed = invert ? -best : best;
         return this.clamp(signed * scalar);
     }
@@ -120,7 +129,11 @@ export class AnalogInput {
         const threshold = source.threshold ?? 0;
         const scalar = source.scalar ?? 1;
         let best = 0;
-        for (const gamepad of gamepads) {
+        gamepads.forEach((gamepad, index) => {
+            if (!this.gamepadIndex.includes(index))
+                return;
+            if (!gamepad)
+                return;
             const positiveButton = gamepad.buttons[source.positive];
             const positiveValue = positiveButton && positiveButton.value > threshold ? positiveButton.value : 0;
             let negativeValue = 0;
@@ -132,7 +145,7 @@ export class AnalogInput {
             if (Math.abs(combined) > Math.abs(best)) {
                 best = combined;
             }
-        }
+        });
         return this.clamp(best * scalar);
     }
     clamp(value) {

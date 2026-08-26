@@ -1,12 +1,12 @@
-import { Keys } from "./KeyCode";
+import type { KeyboardEventCode } from "types-keyboardevent";
 export declare namespace AnalogInput {
     /**
      * キーボードの2キーを +1 / -1 の軸として扱うソース。
      */
     type KeyboardSource = {
         type: "keyboard";
-        positive: Keys;
-        negative?: Keys;
+        positive: KeyboardEventCode;
+        negative?: KeyboardEventCode;
     };
     /**
      * ゲームパッドのアナログ軸（スティック等）を読み取るソース。
@@ -59,6 +59,7 @@ export declare namespace AnalogInput {
  * アプリはメインループを持つ。
  */
 export declare class AnalogInput<Action extends string> implements AnalogInput.Reader<Action> {
+    private readonly gamepadIndex;
     private readonly config;
     private readonly values;
     private readonly pressedKeys;
@@ -68,11 +69,12 @@ export declare class AnalogInput<Action extends string> implements AnalogInput.R
     pause(reason: string): void;
     resume(reason: string): void;
     updateConfig(config: AnalogInput.Config<Action>): void;
-    constructor(config: AnalogInput.Config<Action>);
+    constructor(config: AnalogInput.Config<Action>, gamepadIndex?: number[]);
     /**
      * フレームの最後に呼び出す。
      */
     update(): void;
+    private process;
     getValue(action: Action): number;
     clear(): void;
     /**
