@@ -14,7 +14,8 @@ export namespace KeyConfig {
 
 /**
  * キーコンフィグ画面向け: キーボードまたはゲームパッドで何らかの入力が行われるまで待ち、
- * 押された入力に対応する ConfigString (DigitalInput/AnalogInputのConfigにそのまま使える文字列) を返す。
+ * 押された入力に対応する Source (DigitalInput.Configにそのまま使える) を返す。
+ * AnalogInputのConfigに使う場合は、返り値を各Source型（threshold等を追加可能）に変換して使うこと。
  *
  * - キーボードは keydown イベントで検知する (KeyCode.ts の keys 一覧に含まれるコードのみ)。
  * - ゲームパッドはボタン押下イベントを持たないため、rAFで毎フレームポーリングする。

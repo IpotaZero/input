@@ -1,10 +1,9 @@
 import type { KeyboardEventCode } from "types-keyboardevent"
 
-export type GamepadButtons = `gamepad-button-${number}`
-export type GamepadAxis = `gamepad-axis-${number}-${"positive" | "negative"}`
-
-export type ConfigString = KeyboardEventCode | GamepadButtons | GamepadAxis
-
+/**
+ * キーボードのキー、またはゲームパッドのボタン/軸を指し示す型。
+ * DigitalInput.Config / KeyConfig.waitForAnyInput で共通して使う。
+ */
 export type Source =
     | { type: "keyboard"; code: KeyboardEventCode }
     | { type: "gamepad-button"; index: number }

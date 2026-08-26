@@ -1,18 +1,22 @@
 /**
  * キーボードとゲームパッドのアナログ入力（軸/トリガー）を統一的に扱うためのクラス。
+ * 各ソースは[0,1]の値を返し、1つのアクションに複数のソースを割り当てた場合はそのうち最大のものを採用する
+ * （どれか1つの入力方法が「効いていれば」それを優先する、DigitalInputのOR的な発想と同じ）。
+ * 正負両方向が必要な場合（左右移動など）は、アクション自体を分けてdirectionで向きを指定する。
  *
  * 例:
  * const ai = new AnalogInput({
- *     horizontal: [
- *         { type: "gamepad-axis", axis: 0, threshold: 0.1, scalar: 1 },
- *         { type: "keyboard", positive: "KeyD", negative: "KeyA" },
- *         { type: "gamepad-button", positive: 1, negative: 4 },
+ *     left: [
+ *         { type: "gamepad-axis", index: 0, threshold: 0.1, direction: "negative" },
+ *         { type: "keyboard", code: "KeyA" },
+ *         { type: "gamepad-button", index: 1 },
+ *     ],
+ *     right: [
+ *         { type: "gamepad-axis", index: 0, threshold: 0.1, direction: "positive" },
+ *         { type: "keyboard", code: "KeyD" },
+ *         { type: "gamepad-button", index: 3 },
  *     ],
  * })
- *
- * 1つのアクションに複数のソースを割り当てた場合、
- * 各ソースが返す値のうち絶対値が最大のものを採用する
- * （どれか1つの入力方法が「効いていれば」それを優先する、DigitalInputのOR的な発想と同じ）。
  *
  * 基本的にシングルトンとして使うことを想定している。
  * アプリはメインループを持つ。
@@ -63,7 +67,7 @@ export class AnalogInput {
             let best = 0;
             for (const source of sources) {
                 const value = this.readSource(source, gamepads);
-                if (Math.abs(value) > Math.abs(best)) {
+                if (value > best) {
                     best = value;
                 }
             }
@@ -96,63 +100,54 @@ export class AnalogInput {
         }
     }
     readKeyboard(source) {
-        const positive = this.pressedKeys.has(source.positive);
-        const negative = source.negative ? this.pressedKeys.has(source.negative) : false;
-        if (positive && !negative)
-            return 1;
-        if (negative && !positive)
-            return -1;
-        return 0;
+        return this.pressedKeys.has(source.code) ? 1 : 0;
     }
     readGamepadAxis(source, gamepads) {
         const threshold = source.threshold ?? 0.1;
-        const scalar = source.scalar ?? 1;
-        const invert = source.invert ?? false;
         let best = 0;
         gamepads.forEach((gamepad, index) => {
             if (!this.gamepadIndex.includes(index))
                 return;
             if (!gamepad)
                 return;
-            const raw = gamepad.axes[source.axis];
+            const raw = gamepad.axes[source.index];
             if (raw === undefined)
                 return;
-            const applied = Math.abs(raw) < threshold ? 0 : raw;
-            if (Math.abs(applied) > Math.abs(best)) {
-                best = applied;
+            if (Math.abs(raw) < threshold)
+                return;
+            // directionに一致する成分だけを[0,1]として取り出す
+            const value = source.direction === "positive" ? Math.max(raw, 0) : Math.max(-raw, 0);
+            if (value > best) {
+                best = value;
             }
         });
-        const signed = invert ? -best : best;
-        return this.clamp(signed * scalar);
+        return this.clamp(best);
     }
     readGamepadButton(source, gamepads) {
         const threshold = source.threshold ?? 0;
-        const scalar = source.scalar ?? 1;
         let best = 0;
         gamepads.forEach((gamepad, index) => {
             if (!this.gamepadIndex.includes(index))
                 return;
             if (!gamepad)
                 return;
-            const positiveButton = gamepad.buttons[source.positive];
-            const positiveValue = positiveButton && positiveButton.value > threshold ? positiveButton.value : 0;
-            let negativeValue = 0;
-            if (source.negative !== undefined) {
-                const negativeButton = gamepad.buttons[source.negative];
-                negativeValue = negativeButton && negativeButton.value > threshold ? negativeButton.value : 0;
-            }
-            const combined = positiveValue - negativeValue;
-            if (Math.abs(combined) > Math.abs(best)) {
-                best = combined;
+            const button = gamepad.buttons[source.index];
+            if (!button)
+                return;
+            if (button.value < threshold)
+                return;
+            if (button.value > best) {
+                best = button.value;
             }
         });
-        return this.clamp(best * scalar);
+        return this.clamp(best);
     }
+    /** [0,1]にクランプする。 */
     clamp(value) {
         if (value > 1)
             return 1;
-        if (value < -1)
-            return -1;
+        if (value < 0)
+            return 0;
         return value;
     }
     onKeyDown = (e) => {

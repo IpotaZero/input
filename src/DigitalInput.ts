@@ -1,4 +1,5 @@
-import type { ConfigString } from "./KeyCode"
+import type { KeyboardEventCode } from "types-keyboardevent"
+import type { Source } from "./KeyCode"
 
 export namespace DigitalInput {
     export type Reader<Action extends string> = {
@@ -17,25 +18,46 @@ export namespace DigitalInput {
         clear(): void
     }
 
-    export type Config<Action extends string> = Record<Action, readonly ConfigString[]>
+    export type Config<Action extends string> = Record<Action, readonly Source[]>
 }
 
 /**
- * e.codeまたは、ゲームパッドのボタン/軸に対応する文字列をアクションに割り当てることで、
+ * Sourceを内部のSet/Mapのキーとして使うための文字列化。
+ * (Sourceはオブジェクトなので、参照ではなく値で同一性を判定するために文字列に変換する)
+ */
+function sourceKey(source: Source): string {
+    switch (source.type) {
+        case "keyboard":
+            return `keyboard:${source.code}`
+        case "gamepad-button":
+            return `gamepad-button:${source.index}`
+        case "gamepad-axis":
+            return `gamepad-axis:${source.index}:${source.direction}`
+    }
+}
+
+/**
+ * e.code、またはゲームパッドのボタン/軸を表すSourceをアクションに割り当てることで、
  * キーボードとゲームパッドの入力を統一的に扱えるようにする。
  *
- * 例: new DigitalInput({ right: ["ArrowRight", "gamepad-button-15", "gamepad-axis-0-positive"] })
+ * 例: new DigitalInput({
+ *     right: [
+ *         { type: "keyboard", code: "ArrowRight" },
+ *         { type: "gamepad-button", index: 15 },
+ *         { type: "gamepad-axis", index: 0, direction: "positive" },
+ *     ],
+ * })
  * これで、右矢印キーまたはゲームパッドの右ボタンが押されるまたは左スティックを右に倒すと、action "right" が押されたことになる。
  *
  * 基本的にシングルトンとして使うことを想定している。
  * アプリはメインループを持つ。
  */
 export class DigitalInput<Action extends string> implements DigitalInput.Reader<Action> {
-    // 実際に押されているキーコード/ゲームパッドコードの集合
-    // （アクション単位ではなくコード単位で保持することで、
-    //   同じアクションに複数のコードが割り当てられているときに
+    // 実際に押されているSourceの集合（sourceKey()で文字列化したもの）
+    // （アクション単位ではなくSource単位で保持することで、
+    //   同じアクションに複数のSourceが割り当てられているときに
     //   片方を離しただけでアクション全体がOFFになるのを防ぐ）
-    private readonly pressedCodes = new Set<ConfigString>()
+    private readonly pressedKeys = new Set<string>()
 
     // こちらは従来通りアクション単位の「今フレームで新たに押された/離された」エッジ集合
     private readonly released = new Set<Action>()
@@ -47,8 +69,8 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
     private readonly ac = new AbortController()
 
     private readonly disableReasons = new Set<string>()
-    private readonly config = new Map<Action, readonly ConfigString[]>()
-    private readonly codeToActions = new Map<ConfigString, Action[]>()
+    private readonly config = new Map<Action, readonly Source[]>()
+    private readonly keyToActions = new Map<string, Action[]>()
 
     private isPaused(): boolean {
         return this.disableReasons.size > 0
@@ -64,17 +86,18 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
 
     updateConfig(config: DigitalInput.Config<Action>) {
         this.config.clear()
-        this.codeToActions.clear()
+        this.keyToActions.clear()
 
         const entries = Object.entries(config)
 
-        for (const [action, codes] of entries as Iterable<[Action, readonly ConfigString[]]>) {
-            this.config.set(action, [...codes])
+        for (const [action, sources] of entries as Iterable<[Action, readonly Source[]]>) {
+            this.config.set(action, [...sources])
 
-            for (const code of codes) {
-                const actions = this.codeToActions.get(code) ?? []
+            for (const source of sources) {
+                const key = sourceKey(source)
+                const actions = this.keyToActions.get(key) ?? []
                 actions.push(action)
-                this.codeToActions.set(code, actions)
+                this.keyToActions.set(key, actions)
             }
         }
     }
@@ -103,31 +126,31 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
 
     private processGamepadInput(gamepad: Gamepad) {
         gamepad.buttons.forEach((button, index) => {
-            const code: ConfigString = `gamepad-button-${index}`
+            const key = sourceKey({ type: "gamepad-button", index })
 
-            if (!this.codeToActions.has(code)) return
+            if (!this.keyToActions.has(key)) return
 
             if (button.pressed) {
-                this.press(code)
+                this.press(key)
             } else {
-                this.release(code)
+                this.release(key)
             }
         })
 
         gamepad.axes.forEach((axis, index) => {
-            const positiveCode: ConfigString = `gamepad-axis-${index}-positive`
-            const negativeCode: ConfigString = `gamepad-axis-${index}-negative`
-            if (!this.codeToActions.has(positiveCode) && !this.codeToActions.has(negativeCode)) return
+            const positiveKey = sourceKey({ type: "gamepad-axis", index, direction: "positive" })
+            const negativeKey = sourceKey({ type: "gamepad-axis", index, direction: "negative" })
+            if (!this.keyToActions.has(positiveKey) && !this.keyToActions.has(negativeKey)) return
 
             if (axis > 0.5) {
-                this.press(positiveCode)
-                this.release(negativeCode)
+                this.press(positiveKey)
+                this.release(negativeKey)
             } else if (axis < -0.5) {
-                this.press(negativeCode)
-                this.release(positiveCode)
+                this.press(negativeKey)
+                this.release(positiveKey)
             } else {
-                this.release(positiveCode)
-                this.release(negativeCode)
+                this.release(positiveKey)
+                this.release(negativeKey)
             }
         })
     }
@@ -156,7 +179,7 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
     isSomethingPressed(): boolean {
         if (this.isPaused()) return false
 
-        return this.pressedCodes.size > 0
+        return this.pressedKeys.size > 0
     }
 
     isSomethingPushed(): boolean {
@@ -172,7 +195,7 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
      * 例: isRepeatPushed("attack", 100, 400)
      *   → 押した瞬間に1回true、その400ms後にもう1回true、以降100ms間隔でtrueを返し続ける
      *
-     * 毎フレーム呼び出して使うこと。離す/他のコードで押され続けていない状態になるとリセットされる。
+     * 毎フレーム呼び出して使うこと。離す/他のSourceで押され続けていない状態になるとリセットされる。
      */
     isRepeatPushed(action: Action, intervalMs: number = 100, initialDelayMs: number = 400): boolean {
         if (this.isPaused()) return false
@@ -200,53 +223,56 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
     }
 
     clear(): void {
-        this.pressedCodes.clear()
+        this.pressedKeys.clear()
         this.released.clear()
         this.pushed.clear()
         this.repeatNextFireAt.clear()
     }
 
-    // アクションに割り当てられたコードのうち、どれか一つでも
+    // アクションに割り当てられたSourceのうち、どれか一つでも
     // 押されていればそのアクションは「押されている」とみなす
     private isActionPressed(action: Action): boolean {
-        const codes = this.config.get(action)
-        if (!codes) return false
+        const sources = this.config.get(action)
+        if (!sources) return false
 
-        return codes.some((code) => this.pressedCodes.has(code))
+        return sources.some((source) => this.pressedKeys.has(sourceKey(source)))
     }
 
     private onKeyDown = (e: KeyboardEvent) => {
-        if (!this.codeToActions.has(e.code as ConfigString)) return
+        const key = sourceKey({ type: "keyboard", code: e.code as KeyboardEventCode })
+        if (!this.keyToActions.has(key)) return
 
-        this.press(e.code as ConfigString)
+        this.press(key)
     }
 
     private onKeyUp = (e: KeyboardEvent) => {
-        if (!this.codeToActions.has(e.code as ConfigString)) return
+        const key = sourceKey({ type: "keyboard", code: e.code as KeyboardEventCode })
+        if (!this.keyToActions.has(key)) return
 
-        this.release(e.code as ConfigString)
+        this.release(key)
     }
 
+
     /**
-     * 新規にコードが押されたことを記録する。pause中は「新規に押される」ことだけを無視する
+     * 新規にSourceが押されたことを記録する。pause中は「新規に押される」ことだけを無視する
      * (例: キーコンフィグの入力待ち中に、たまたま別のキーが押されてもゲーム側の入力として扱わない)。
      * 一方releaseはpause中でも常に反映する。そうしないと、pauseした瞬間にたまたま押されていた
      * キー/ボタンが、pause中に離されたことを検知できずに「押されっぱなし」のまま固まってしまい、
      * resume後にそのキー/ボタンが二度と反応しなくなる (または離すまで別の入力として誤検知され続ける)。
      *
-     * pause中でも物理的な押下状態そのもの(pressedCodes)は必ず記録する。キーボードのkeydown、
+     * pause中でも物理的な押下状態そのもの(pressedKeys)は必ず記録する。キーボードのkeydown、
      * ゲームパッドのポーリング(update()内のupdateGamepadState())ともに、pause中かどうかに
      * 関わらずこのpress()自体は呼ばれ続けるので、ここで記録を止めてしまうとpause解除時に
      * 「押されっぱなしのボタン」を新規pushとして誤検知することになる。
      */
-    private press(code: ConfigString) {
-        if (this.pressedCodes.has(code)) return
+    private press(key: string) {
+        if (this.pressedKeys.has(key)) return
 
         if (!this.isPaused()) {
-            const actions = this.codeToActions.get(code)
+            const actions = this.keyToActions.get(key)
             if (actions) {
                 for (const action of actions) {
-                    // 他のコード経由で既に押されている場合は「新規に押された」扱いにしない
+                    // 他のSource経由で既に押されている場合は「新規に押された」扱いにしない
                     if (!this.isActionPressed(action)) {
                         this.pushed.add(action)
                     }
@@ -254,18 +280,18 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
             }
         }
 
-        this.pressedCodes.add(code)
+        this.pressedKeys.add(key)
     }
 
-    private release(code: ConfigString) {
-        if (!this.pressedCodes.has(code)) return
+    private release(key: string) {
+        if (!this.pressedKeys.has(key)) return
 
-        this.pressedCodes.delete(code)
+        this.pressedKeys.delete(key)
 
-        const actions = this.codeToActions.get(code)
+        const actions = this.keyToActions.get(key)
         if (actions) {
             for (const action of actions) {
-                // 他のコードがまだ押されている場合はアクションとしてはまだ押された状態を維持する
+                // 他のSourceがまだ押されている場合はアクションとしてはまだ押された状態を維持する
                 if (!this.isActionPressed(action)) {
                     this.released.add(action)
                 }

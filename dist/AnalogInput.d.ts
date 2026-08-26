@@ -1,59 +1,60 @@
 import type { KeyboardEventCode } from "types-keyboardevent";
 export declare namespace AnalogInput {
     /**
-     * キーボードの2キーを +1 / -1 の軸として扱うソース。
+     * キーボードのキーを読み取るソース。
+     * 押されていれば1、押されていなければ0。
      */
     type KeyboardSource = {
         type: "keyboard";
-        positive: KeyboardEventCode;
-        negative?: KeyboardEventCode;
+        code: KeyboardEventCode;
     };
     /**
      * ゲームパッドのアナログ軸（スティック等）を読み取るソース。
+     * directionで指定した向き（positive: +方向, negative: -方向）の成分のみを[0,1]で返す。
      * threshold未満の入力はデッドゾーンとして0に丸められる。
-     * scalarは出力にかける倍率（最終的に-1〜1にクランプされる）。
-     * invertを立てると符号を反転する。
      */
     type AxisSource = {
         type: "gamepad-axis";
-        axis: number;
+        index: number;
+        direction: "positive" | "negative";
         threshold?: number;
-        scalar?: number;
-        invert?: boolean;
     };
     /**
      * ゲームパッドのボタン（アナログトリガー等）を読み取るソース。
-     * positiveボタンの値をそのまま+方向、negativeボタンの値を-方向として扱い、
-     * 両方指定されている場合は positive - negative を最終値とする。
+     * ボタンの値をそのまま[0,1]で返す。
+     * threshold未満の入力はデッドゾーンとして0に丸められる。
      */
     type ButtonSource = {
         type: "gamepad-button";
-        positive: number;
-        negative?: number;
+        index: number;
         threshold?: number;
-        scalar?: number;
     };
     type Source = KeyboardSource | AxisSource | ButtonSource;
     type Reader<Action extends string> = {
+        /** [0,1]を取る。 */
         getValue(action: Action): number;
     };
     type Config<Action extends string> = Record<Action, readonly AnalogInput.Source[]>;
 }
 /**
  * キーボードとゲームパッドのアナログ入力（軸/トリガー）を統一的に扱うためのクラス。
+ * 各ソースは[0,1]の値を返し、1つのアクションに複数のソースを割り当てた場合はそのうち最大のものを採用する
+ * （どれか1つの入力方法が「効いていれば」それを優先する、DigitalInputのOR的な発想と同じ）。
+ * 正負両方向が必要な場合（左右移動など）は、アクション自体を分けてdirectionで向きを指定する。
  *
  * 例:
  * const ai = new AnalogInput({
- *     horizontal: [
- *         { type: "gamepad-axis", axis: 0, threshold: 0.1, scalar: 1 },
- *         { type: "keyboard", positive: "KeyD", negative: "KeyA" },
- *         { type: "gamepad-button", positive: 1, negative: 4 },
+ *     left: [
+ *         { type: "gamepad-axis", index: 0, threshold: 0.1, direction: "negative" },
+ *         { type: "keyboard", code: "KeyA" },
+ *         { type: "gamepad-button", index: 1 },
+ *     ],
+ *     right: [
+ *         { type: "gamepad-axis", index: 0, threshold: 0.1, direction: "positive" },
+ *         { type: "keyboard", code: "KeyD" },
+ *         { type: "gamepad-button", index: 3 },
  *     ],
  * })
- *
- * 1つのアクションに複数のソースを割り当てた場合、
- * 各ソースが返す値のうち絶対値が最大のものを採用する
- * （どれか1つの入力方法が「効いていれば」それを優先する、DigitalInputのOR的な発想と同じ）。
  *
  * 基本的にシングルトンとして使うことを想定している。
  * アプリはメインループを持つ。
@@ -85,6 +86,7 @@ export declare class AnalogInput<Action extends string> implements AnalogInput.R
     private readKeyboard;
     private readGamepadAxis;
     private readGamepadButton;
+    /** [0,1]にクランプする。 */
     private clamp;
     private onKeyDown;
     private onKeyUp;

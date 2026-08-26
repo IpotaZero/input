@@ -1,4 +1,4 @@
-import type { ConfigString } from "./KeyCode";
+import type { Source } from "./KeyCode";
 export declare namespace DigitalInput {
     type Reader<Action extends string> = {
         isPressed(action: Action): boolean;
@@ -14,13 +14,19 @@ export declare namespace DigitalInput {
         isRepeatPushed(action: Action, intervalMs: number, initialDelayMs?: number): boolean;
         clear(): void;
     };
-    type Config<Action extends string> = Record<Action, readonly ConfigString[]>;
+    type Config<Action extends string> = Record<Action, readonly Source[]>;
 }
 /**
- * e.codeまたは、ゲームパッドのボタン/軸に対応する文字列をアクションに割り当てることで、
+ * e.code、またはゲームパッドのボタン/軸を表すSourceをアクションに割り当てることで、
  * キーボードとゲームパッドの入力を統一的に扱えるようにする。
  *
- * 例: new DigitalInput({ right: ["ArrowRight", "gamepad-button-15", "gamepad-axis-0-positive"] })
+ * 例: new DigitalInput({
+ *     right: [
+ *         { type: "keyboard", code: "ArrowRight" },
+ *         { type: "gamepad-button", index: 15 },
+ *         { type: "gamepad-axis", index: 0, direction: "positive" },
+ *     ],
+ * })
  * これで、右矢印キーまたはゲームパッドの右ボタンが押されるまたは左スティックを右に倒すと、action "right" が押されたことになる。
  *
  * 基本的にシングルトンとして使うことを想定している。
@@ -28,14 +34,14 @@ export declare namespace DigitalInput {
  */
 export declare class DigitalInput<Action extends string> implements DigitalInput.Reader<Action> {
     private readonly gamepadIndex;
-    private readonly pressedCodes;
+    private readonly pressedKeys;
     private readonly released;
     private readonly pushed;
     private readonly repeatNextFireAt;
     private readonly ac;
     private readonly disableReasons;
     private readonly config;
-    private readonly codeToActions;
+    private readonly keyToActions;
     private isPaused;
     pause(reason: string): void;
     resume(reason: string): void;
@@ -62,7 +68,7 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
      * 例: isRepeatPushed("attack", 100, 400)
      *   → 押した瞬間に1回true、その400ms後にもう1回true、以降100ms間隔でtrueを返し続ける
      *
-     * 毎フレーム呼び出して使うこと。離す/他のコードで押され続けていない状態になるとリセットされる。
+     * 毎フレーム呼び出して使うこと。離す/他のSourceで押され続けていない状態になるとリセットされる。
      */
     isRepeatPushed(action: Action, intervalMs?: number, initialDelayMs?: number): boolean;
     clear(): void;
@@ -70,13 +76,13 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
     private onKeyDown;
     private onKeyUp;
     /**
-     * 新規にコードが押されたことを記録する。pause中は「新規に押される」ことだけを無視する
+     * 新規にSourceが押されたことを記録する。pause中は「新規に押される」ことだけを無視する
      * (例: キーコンフィグの入力待ち中に、たまたま別のキーが押されてもゲーム側の入力として扱わない)。
      * 一方releaseはpause中でも常に反映する。そうしないと、pauseした瞬間にたまたま押されていた
      * キー/ボタンが、pause中に離されたことを検知できずに「押されっぱなし」のまま固まってしまい、
      * resume後にそのキー/ボタンが二度と反応しなくなる (または離すまで別の入力として誤検知され続ける)。
      *
-     * pause中でも物理的な押下状態そのもの(pressedCodes)は必ず記録する。キーボードのkeydown、
+     * pause中でも物理的な押下状態そのもの(pressedKeys)は必ず記録する。キーボードのkeydown、
      * ゲームパッドのポーリング(update()内のupdateGamepadState())ともに、pause中かどうかに
      * 関わらずこのpress()自体は呼ばれ続けるので、ここで記録を止めてしまうとpause解除時に
      * 「押されっぱなしのボタン」を新規pushとして誤検知することになる。
