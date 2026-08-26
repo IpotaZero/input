@@ -28,7 +28,7 @@ export var KeyConfig;
                 ac.abort();
                 cancelAnimationFrame(rafId);
                 if (result.ok) {
-                    resolve(result.code);
+                    resolve(result.source);
                 }
                 else {
                     reject(new DOMException("Aborted", "AbortError"));
@@ -36,7 +36,7 @@ export var KeyConfig;
             };
             options.signal?.addEventListener("abort", () => finish({ ok: false }), { signal: ac.signal });
             window.addEventListener("keydown", (e) => {
-                finish({ ok: true, code: e.code });
+                finish({ ok: true, source: { type: "keyboard", code: e.code } });
             }, { signal: ac.signal });
             // 呼び出し時点で押されている/倒されているゲームパッド入力の初期スナップショット
             // (これらは押しっぱなしとみなし、離れるまで新規入力として検知しない)
@@ -68,7 +68,7 @@ export var KeyConfig;
                         }
                         if (stillHeld.has(key))
                             continue;
-                        finish({ ok: true, code: `gamepad-button-${index}` });
+                        finish({ ok: true, source: { type: "gamepad-button", index } });
                         return;
                     }
                     for (let index = 0; index < gamepad.axes.length; index++) {
@@ -81,7 +81,7 @@ export var KeyConfig;
                         if (stillHeld.has(key))
                             continue;
                         const direction = value > 0 ? "positive" : "negative";
-                        finish({ ok: true, code: `gamepad-axis-${index}-${direction}` });
+                        finish({ ok: true, source: { type: "gamepad-axis", index, direction } });
                         return;
                     }
                 }

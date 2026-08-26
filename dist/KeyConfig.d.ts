@@ -1,4 +1,4 @@
-import type { ConfigString } from "./KeyCode";
+import type { Source } from "./KeyCode";
 export declare namespace KeyConfig {
     type Options = {
         /** ゲームパッドの軸をpressedとみなす閾値の絶対値 (デフォルト0.5) */
@@ -24,5 +24,5 @@ export declare namespace KeyConfig {
  * config[action] = [...config[action], code]
  */
 export declare namespace KeyConfig {
-    function waitForAnyInput(options?: KeyConfig.Options): Promise<ConfigString>;
+    function waitForAnyInput(options?: KeyConfig.Options): Promise<Source>;
 }

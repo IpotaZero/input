@@ -1,4 +1,5 @@
-import type { ConfigString } from "./KeyCode"
+import type { KeyboardEventCode } from "types-keyboardevent"
+import type { Source } from "./KeyCode"
 
 export namespace KeyConfig {
     export type Options = {
@@ -26,11 +27,11 @@ export namespace KeyConfig {
  * config[action] = [...config[action], code]
  */
 export namespace KeyConfig {
-    export function waitForAnyInput(options: KeyConfig.Options = {}): Promise<ConfigString> {
+    export function waitForAnyInput(options: KeyConfig.Options = {}): Promise<Source> {
         const axisThreshold = options.axisThreshold ?? 0.5
         const buttonThreshold = options.buttonThreshold ?? 0.5
 
-        return new Promise<ConfigString>((resolve, reject) => {
+        return new Promise<Source>((resolve, reject) => {
             if (options.signal?.aborted) {
                 reject(new DOMException("Aborted", "AbortError"))
                 return
@@ -39,11 +40,11 @@ export namespace KeyConfig {
             const ac = new AbortController()
             let rafId: number
 
-            const finish = (result: { ok: true; code: ConfigString } | { ok: false }): void => {
+            const finish = (result: { ok: true; source: Source } | { ok: false }): void => {
                 ac.abort()
                 cancelAnimationFrame(rafId)
                 if (result.ok) {
-                    resolve(result.code)
+                    resolve(result.source)
                 } else {
                     reject(new DOMException("Aborted", "AbortError"))
                 }
@@ -54,7 +55,7 @@ export namespace KeyConfig {
             window.addEventListener(
                 "keydown",
                 (e) => {
-                    finish({ ok: true, code: e.code as ConfigString })
+                    finish({ ok: true, source: { type: "keyboard", code: e.code as KeyboardEventCode } })
                 },
                 { signal: ac.signal },
             )
@@ -91,7 +92,7 @@ export namespace KeyConfig {
                         }
                         if (stillHeld.has(key)) continue
 
-                        finish({ ok: true, code: `gamepad-button-${index}` })
+                        finish({ ok: true, source: { type: "gamepad-button", index } })
                         return
                     }
 
@@ -106,7 +107,7 @@ export namespace KeyConfig {
                         if (stillHeld.has(key)) continue
 
                         const direction = value > 0 ? "positive" : "negative"
-                        finish({ ok: true, code: `gamepad-axis-${index}-${direction}` })
+                        finish({ ok: true, source: { type: "gamepad-axis", index, direction } })
                         return
                     }
                 }
