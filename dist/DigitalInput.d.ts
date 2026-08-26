@@ -68,6 +68,13 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
     private isActionPressed;
     private onKeyDown;
     private onKeyUp;
+    /**
+     * 新規にコードが押されたことを記録する。pause中は「新規に押される」ことだけを無視する
+     * (例: キーコンフィグの入力待ち中に、たまたま別のキーが押されてもゲーム側の入力として扱わない)。
+     * 一方releaseはpause中でも常に反映する。そうしないと、pauseした瞬間にたまたま押されていた
+     * キー/ボタンが、pause中に離されたことを検知できずに「押されっぱなし」のまま固まってしまい、
+     * resume後にそのキー/ボタンが二度と反応しなくなる (または離すまで別の入力として誤検知され続ける)。
+     */
     private press;
     private release;
     private updateGamepadState;

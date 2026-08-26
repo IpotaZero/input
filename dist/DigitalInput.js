@@ -29,11 +29,9 @@ export class DigitalInput {
     }
     pause(reason) {
         this.disableReasons.add(reason);
-        console.log("DigitalInput is paused because of reasons:", this.disableReasons);
     }
     resume(reason) {
         this.disableReasons.delete(reason);
-        console.log("DigitalInput is paused because of reasons:", this.disableReasons);
     }
     updateConfig(config) {
         this.config.clear();
@@ -97,35 +95,37 @@ export class DigitalInput {
     }
     /**押されているか? */
     isPressed(action) {
+        // pause中でも「離された」ことだけは常に反映したいので、updateGamepadStateは常に呼ぶ。
+        // 呼び出し元への報告(戻り値)だけをpause中はfalseにする。
+        this.updateGamepadState();
         if (this.isPaused())
             return false;
-        this.updateGamepadState();
         return this.isActionPressed(action);
     }
     /**ちょうどこのフレームに離されたか? */
     isReleased(action) {
+        this.updateGamepadState();
         if (this.isPaused())
             return false;
-        this.updateGamepadState();
         return this.released.has(action);
     }
     /**ちょうどこのフレームに押されたか? */
     isPushed(action) {
+        this.updateGamepadState();
         if (this.isPaused())
             return false;
-        this.updateGamepadState();
         return this.pushed.has(action);
     }
     isSomethingPressed() {
+        this.updateGamepadState();
         if (this.isPaused())
             return false;
-        this.updateGamepadState();
         return this.pressedCodes.size > 0;
     }
     isSomethingPushed() {
+        this.updateGamepadState();
         if (this.isPaused())
             return false;
-        this.updateGamepadState();
         return this.pushed.size > 0;
     }
     /**
@@ -138,9 +138,9 @@ export class DigitalInput {
      * 毎フレーム呼び出して使うこと。離す/他のコードで押され続けていない状態になるとリセットされる。
      */
     isRepeatPushed(action, intervalMs, initialDelayMs = intervalMs) {
+        this.updateGamepadState();
         if (this.isPaused())
             return false;
-        this.updateGamepadState();
         if (!this.isActionPressed(action)) {
             this.repeatNextFireAt.delete(action);
             return false;
@@ -173,21 +173,26 @@ export class DigitalInput {
         return codes.some((code) => this.pressedCodes.has(code));
     }
     onKeyDown = (e) => {
-        if (this.isPaused())
-            return;
         if (!this.codeToActions.has(e.code))
             return;
         this.press(e.code);
     };
     onKeyUp = (e) => {
-        if (this.isPaused())
-            return;
         if (!this.codeToActions.has(e.code))
             return;
         this.release(e.code);
     };
+    /**
+     * 新規にコードが押されたことを記録する。pause中は「新規に押される」ことだけを無視する
+     * (例: キーコンフィグの入力待ち中に、たまたま別のキーが押されてもゲーム側の入力として扱わない)。
+     * 一方releaseはpause中でも常に反映する。そうしないと、pauseした瞬間にたまたま押されていた
+     * キー/ボタンが、pause中に離されたことを検知できずに「押されっぱなし」のまま固まってしまい、
+     * resume後にそのキー/ボタンが二度と反応しなくなる (または離すまで別の入力として誤検知され続ける)。
+     */
     press(code) {
         if (this.pressedCodes.has(code))
+            return;
+        if (this.isPaused())
             return;
         const actions = this.codeToActions.get(code);
         if (actions) {
@@ -199,7 +204,6 @@ export class DigitalInput {
             }
         }
         this.pressedCodes.add(code);
-        console.log(this.pushed);
     }
     release(code) {
         if (!this.pressedCodes.has(code))
