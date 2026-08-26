@@ -5,18 +5,18 @@ export declare namespace StandardGamepadMap {
      * W3C Standard Gamepad のボタンインデックスから物理位置・役割へのマッピング
      */
     const buttonMap: {
-        readonly 0: "ActionBottom";
-        readonly 1: "ActionRight";
-        readonly 2: "ActionLeft";
-        readonly 3: "ActionTop";
-        readonly 4: "BumperLeft";
-        readonly 5: "BumperRight";
-        readonly 6: "TriggerLeft";
-        readonly 7: "TriggerRight";
-        readonly 8: "Select";
-        readonly 9: "Start";
-        readonly 10: "StickLeft";
-        readonly 11: "StickRight";
+        readonly 0: "ButtonSouth";
+        readonly 1: "ButtonEast";
+        readonly 2: "ButtonWest";
+        readonly 3: "ButtonNorth";
+        readonly 4: "LeftShoulder";
+        readonly 5: "RightShoulder";
+        readonly 6: "LeftTrigger";
+        readonly 7: "RightTrigger";
+        readonly 8: "SelectButton";
+        readonly 9: "StartButton";
+        readonly 10: "LeftStickButton";
+        readonly 11: "RightStickButton";
         readonly 12: "DpadUp";
         readonly 13: "DpadDown";
         readonly 14: "DpadLeft";

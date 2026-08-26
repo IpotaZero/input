@@ -1,5 +1,6 @@
 import type { KeyboardEventCode } from "types-keyboardevent"
 import type { Source } from "./KeyCode"
+import { SourceKey } from "./KeyCode"
 
 export namespace DigitalInput {
     export type Reader<Action extends string> = {
@@ -19,21 +20,6 @@ export namespace DigitalInput {
     }
 
     export type Config<Action extends string> = Record<Action, readonly Source[]>
-}
-
-/**
- * Sourceを内部のSet/Mapのキーとして使うための文字列化。
- * (Sourceはオブジェクトなので、参照ではなく値で同一性を判定するために文字列に変換する)
- */
-function sourceKey(source: Source): string {
-    switch (source.type) {
-        case "keyboard":
-            return `keyboard:${source.code}`
-        case "gamepad-button":
-            return `gamepad-button:${source.index}`
-        case "gamepad-axis":
-            return `gamepad-axis:${source.index}:${source.direction}`
-    }
 }
 
 /**
@@ -94,7 +80,7 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
             this.config.set(action, [...sources])
 
             for (const source of sources) {
-                const key = sourceKey(source)
+                const key = SourceKey.toKey(source)
                 const actions = this.keyToActions.get(key) ?? []
                 actions.push(action)
                 this.keyToActions.set(key, actions)
@@ -126,7 +112,7 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
 
     private processGamepadInput(gamepad: Gamepad) {
         gamepad.buttons.forEach((button, index) => {
-            const key = sourceKey({ type: "gamepad-button", index })
+            const key = SourceKey.toKey({ type: "gamepad-button", index })
 
             if (!this.keyToActions.has(key)) return
 
@@ -138,8 +124,8 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
         })
 
         gamepad.axes.forEach((axis, index) => {
-            const positiveKey = sourceKey({ type: "gamepad-axis", index, direction: "positive" })
-            const negativeKey = sourceKey({ type: "gamepad-axis", index, direction: "negative" })
+            const positiveKey = SourceKey.toKey({ type: "gamepad-axis", index, direction: "positive" })
+            const negativeKey = SourceKey.toKey({ type: "gamepad-axis", index, direction: "negative" })
             if (!this.keyToActions.has(positiveKey) && !this.keyToActions.has(negativeKey)) return
 
             if (axis > 0.5) {
@@ -235,18 +221,18 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
         const sources = this.config.get(action)
         if (!sources) return false
 
-        return sources.some((source) => this.pressedKeys.has(sourceKey(source)))
+        return sources.some((source) => this.pressedKeys.has(SourceKey.toKey(source)))
     }
 
     private onKeyDown = (e: KeyboardEvent) => {
-        const key = sourceKey({ type: "keyboard", code: e.code as KeyboardEventCode })
+        const key = SourceKey.toKey({ type: "keyboard", code: e.code as KeyboardEventCode })
         if (!this.keyToActions.has(key)) return
 
         this.press(key)
     }
 
     private onKeyUp = (e: KeyboardEvent) => {
-        const key = sourceKey({ type: "keyboard", code: e.code as KeyboardEventCode })
+        const key = SourceKey.toKey({ type: "keyboard", code: e.code as KeyboardEventCode })
         if (!this.keyToActions.has(key)) return
 
         this.release(key)

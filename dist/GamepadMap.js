@@ -4,18 +4,18 @@ export var StandardGamepadMap;
      * W3C Standard Gamepad のボタンインデックスから物理位置・役割へのマッピング
      */
     StandardGamepadMap.buttonMap = {
-        0: "ActionBottom", // A (Xbox), × (PS), B (Switch)
-        1: "ActionRight", // B (Xbox), ○ (PS), A (Switch)
-        2: "ActionLeft", // X (Xbox), □ (PS), Y (Switch)
-        3: "ActionTop", // Y (Xbox), △ (PS), X (Switch)
-        4: "BumperLeft", // LB, L1, L
-        5: "BumperRight", // RB, R1, R
-        6: "TriggerLeft", // LT, L2, ZL
-        7: "TriggerRight", // RT, R2, ZR
-        8: "Select", // Back, Share, - (Minus)
-        9: "Start", // Start, Options, + (Plus)
-        10: "StickLeft", // L3 (左スティック押し込み)
-        11: "StickRight", // R3 (右スティック押し込み)
+        0: "ButtonSouth", // A (Xbox), × (PS), B (Switch)
+        1: "ButtonEast", // B (Xbox), ○ (PS), A (Switch)
+        2: "ButtonWest", // X (Xbox), □ (PS), Y (Switch)
+        3: "ButtonNorth", // Y (Xbox), △ (PS), X (Switch)
+        4: "LeftShoulder", // LB, L1, L
+        5: "RightShoulder", // RB, R1, R
+        6: "LeftTrigger", // LT, L2, ZL
+        7: "RightTrigger", // RT, R2, ZR
+        8: "SelectButton", // Back, Share, - (Minus)
+        9: "StartButton", // Start, Options, + (Plus)
+        10: "LeftStickButton", // L3 (左スティック押し込み)
+        11: "RightStickButton", // R3 (右スティック押し込み)
         12: "DpadUp", // 十字キー 上
         13: "DpadDown", // 十字キー 下
         14: "DpadLeft", // 十字キー 左

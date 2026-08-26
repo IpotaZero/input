@@ -1,17 +1,4 @@
-/**
- * Sourceを内部のSet/Mapのキーとして使うための文字列化。
- * (Sourceはオブジェクトなので、参照ではなく値で同一性を判定するために文字列に変換する)
- */
-function sourceKey(source) {
-    switch (source.type) {
-        case "keyboard":
-            return `keyboard:${source.code}`;
-        case "gamepad-button":
-            return `gamepad-button:${source.index}`;
-        case "gamepad-axis":
-            return `gamepad-axis:${source.index}:${source.direction}`;
-    }
-}
+import { SourceKey } from "./KeyCode";
 /**
  * e.code、またはゲームパッドのボタン/軸を表すSourceをアクションに割り当てることで、
  * キーボードとゲームパッドの入力を統一的に扱えるようにする。
@@ -60,7 +47,7 @@ export class DigitalInput {
         for (const [action, sources] of entries) {
             this.config.set(action, [...sources]);
             for (const source of sources) {
-                const key = sourceKey(source);
+                const key = SourceKey.toKey(source);
                 const actions = this.keyToActions.get(key) ?? [];
                 actions.push(action);
                 this.keyToActions.set(key, actions);
@@ -86,7 +73,7 @@ export class DigitalInput {
     }
     processGamepadInput(gamepad) {
         gamepad.buttons.forEach((button, index) => {
-            const key = sourceKey({ type: "gamepad-button", index });
+            const key = SourceKey.toKey({ type: "gamepad-button", index });
             if (!this.keyToActions.has(key))
                 return;
             if (button.pressed) {
@@ -97,8 +84,8 @@ export class DigitalInput {
             }
         });
         gamepad.axes.forEach((axis, index) => {
-            const positiveKey = sourceKey({ type: "gamepad-axis", index, direction: "positive" });
-            const negativeKey = sourceKey({ type: "gamepad-axis", index, direction: "negative" });
+            const positiveKey = SourceKey.toKey({ type: "gamepad-axis", index, direction: "positive" });
+            const negativeKey = SourceKey.toKey({ type: "gamepad-axis", index, direction: "negative" });
             if (!this.keyToActions.has(positiveKey) && !this.keyToActions.has(negativeKey))
                 return;
             if (axis > 0.5) {
@@ -184,16 +171,16 @@ export class DigitalInput {
         const sources = this.config.get(action);
         if (!sources)
             return false;
-        return sources.some((source) => this.pressedKeys.has(sourceKey(source)));
+        return sources.some((source) => this.pressedKeys.has(SourceKey.toKey(source)));
     }
     onKeyDown = (e) => {
-        const key = sourceKey({ type: "keyboard", code: e.code });
+        const key = SourceKey.toKey({ type: "keyboard", code: e.code });
         if (!this.keyToActions.has(key))
             return;
         this.press(key);
     };
     onKeyUp = (e) => {
-        const key = sourceKey({ type: "keyboard", code: e.code });
+        const key = SourceKey.toKey({ type: "keyboard", code: e.code });
         if (!this.keyToActions.has(key))
             return;
         this.release(key);
