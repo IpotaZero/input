@@ -53,8 +53,7 @@ export class DigitalInput {
         window.addEventListener("keyup", this.onKeyUp, { signal: this.ac.signal });
     }
     /**
-     * 毎フレーム、呼び出し元(アプリのメインループ)から呼ぶ。呼び出し元がMode/Menu等で何をしていようと
-     * 関係なく必ず呼ばれる、という点がポイント。
+     * 毎フレーム、呼び出し元(アプリのメインループ)から呼ぶ。呼び出し元が何をしていようと関係なく必ず呼ばれる、という点がポイント。
      *
      * ゲームパッドはkeydown/keyupのようなイベントを持たないため、ここでのポーリングでしか状態を
      * 検知できない。isPressed()等の呼び出しタイミングに便乗して更新する方式だと、呼び出し側が
@@ -140,7 +139,7 @@ export class DigitalInput {
      *
      * 毎フレーム呼び出して使うこと。離す/他のコードで押され続けていない状態になるとリセットされる。
      */
-    isRepeatPushed(action, intervalMs, initialDelayMs = intervalMs) {
+    isRepeatPushed(action, intervalMs = 50, initialDelayMs = 500) {
         if (this.isPaused())
             return false;
         if (!this.isActionPressed(action)) {

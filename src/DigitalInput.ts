@@ -182,7 +182,7 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
      *
      * 毎フレーム呼び出して使うこと。離す/他のコードで押され続けていない状態になるとリセットされる。
      */
-    isRepeatPushed(action: Action, intervalMs: number, initialDelayMs: number = intervalMs): boolean {
+    isRepeatPushed(action: Action, intervalMs: number = 50, initialDelayMs: number = 500): boolean {
         if (this.isPaused()) return false
 
         if (!this.isActionPressed(action)) {

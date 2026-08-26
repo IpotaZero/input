@@ -42,8 +42,7 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
     updateConfig(config: DigitalInput.Config<Action>): void;
     constructor(config: DigitalInput.Config<Action>, gamepadIndex?: number[]);
     /**
-     * 毎フレーム、呼び出し元(アプリのメインループ)から呼ぶ。呼び出し元がMode/Menu等で何をしていようと
-     * 関係なく必ず呼ばれる、という点がポイント。
+     * 毎フレーム、呼び出し元(アプリのメインループ)から呼ぶ。呼び出し元が何をしていようと関係なく必ず呼ばれる、という点がポイント。
      *
      * ゲームパッドはkeydown/keyupのようなイベントを持たないため、ここでのポーリングでしか状態を
      * 検知できない。isPressed()等の呼び出しタイミングに便乗して更新する方式だと、呼び出し側が
@@ -73,7 +72,7 @@ export declare class DigitalInput<Action extends string> implements DigitalInput
      *
      * 毎フレーム呼び出して使うこと。離す/他のコードで押され続けていない状態になるとリセットされる。
      */
-    isRepeatPushed(action: Action, intervalMs: number, initialDelayMs?: number): boolean;
+    isRepeatPushed(action: Action, intervalMs?: number, initialDelayMs?: number): boolean;
     clear(): void;
     private isActionPressed;
     private onKeyDown;
