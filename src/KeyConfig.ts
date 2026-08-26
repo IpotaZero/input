@@ -1,4 +1,4 @@
-import { ConfigString, keys } from "./KeyCode"
+import type { ConfigString } from "./KeyCode"
 
 export namespace KeyConfig {
     export type Options = {
@@ -54,7 +54,6 @@ export namespace KeyConfig {
             window.addEventListener(
                 "keydown",
                 (e) => {
-                    if (!(keys as readonly string[]).includes(e.code)) return
                     finish({ ok: true, code: e.code as ConfigString })
                 },
                 { signal: ac.signal },
@@ -83,7 +82,8 @@ export namespace KeyConfig {
 
                     for (let index = 0; index < gamepad.buttons.length; index++) {
                         const key = `b${gamepad.index}:${index}`
-                        const pressed = gamepad.buttons[index].value >= buttonThreshold || gamepad.buttons[index].pressed
+                        const pressed =
+                            gamepad.buttons[index].value >= buttonThreshold || gamepad.buttons[index].pressed
 
                         if (!pressed) {
                             stillHeld.delete(key)

@@ -1,4 +1,4 @@
-import { ConfigString } from "./KeyCode"
+import type { ConfigString } from "./KeyCode"
 
 export namespace DigitalInput {
     export type Reader<Action extends string> = {
@@ -79,7 +79,10 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
         }
     }
 
-    constructor(config: DigitalInput.Config<Action>) {
+    constructor(
+        config: DigitalInput.Config<Action>,
+        private readonly gamepadIndex = [0, 1, 2, 3],
+    ) {
         this.updateConfig(config)
         window.addEventListener("keydown", this.onKeyDown, { signal: this.ac.signal })
         window.addEventListener("keyup", this.onKeyUp, { signal: this.ac.signal })
@@ -273,9 +276,11 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
     }
 
     private updateGamepadState() {
-        navigator
-            .getGamepads()
-            ?.filter((gamepad) => !!gamepad)
-            .forEach((gamepad) => this.processGamepadInput(gamepad))
+        navigator.getGamepads().forEach((gamepad, index) => {
+            if (!this.gamepadIndex.includes(index)) return
+            if (!gamepad) return
+
+            this.processGamepadInput(gamepad)
+        })
     }
 }

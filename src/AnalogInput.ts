@@ -1,4 +1,4 @@
-import { Keys } from "./KeyCode"
+import type { KeyboardEventCode } from "types-keyboardevent"
 
 export namespace AnalogInput {
     /**
@@ -6,8 +6,8 @@ export namespace AnalogInput {
      */
     export type KeyboardSource = {
         type: "keyboard"
-        positive: Keys
-        negative?: Keys
+        positive: KeyboardEventCode
+        negative?: KeyboardEventCode
     }
 
     /**
@@ -70,7 +70,7 @@ export class AnalogInput<Action extends string> implements AnalogInput.Reader<Ac
     private readonly values = new Map<Action, number>()
 
     // 実際に押されているキーボードのコードの集合
-    private readonly pressedKeys = new Set<Keys>()
+    private readonly pressedKeys = new Set<KeyboardEventCode>()
 
     private readonly ac = new AbortController()
     private readonly disableReasons = new Set<string>()
@@ -95,7 +95,10 @@ export class AnalogInput<Action extends string> implements AnalogInput.Reader<Ac
         }
     }
 
-    constructor(config: AnalogInput.Config<Action>) {
+    constructor(
+        config: AnalogInput.Config<Action>,
+        private readonly gamepadIndex = [0, 1, 2, 3],
+    ) {
         this.updateConfig(config)
         window.addEventListener("keydown", this.onKeyDown, { signal: this.ac.signal })
         window.addEventListener("keyup", this.onKeyUp, { signal: this.ac.signal })
@@ -112,7 +115,11 @@ export class AnalogInput<Action extends string> implements AnalogInput.Reader<Ac
             return
         }
 
-        const gamepads = navigator.getGamepads()?.filter((gamepad): gamepad is Gamepad => !!gamepad) ?? []
+        this.process()
+    }
+
+    private process() {
+        const gamepads = navigator.getGamepads()
 
         for (const [action, sources] of this.config) {
             let best = 0
@@ -146,7 +153,7 @@ export class AnalogInput<Action extends string> implements AnalogInput.Reader<Ac
         this.ac.abort()
     }
 
-    private readSource(source: AnalogInput.Source, gamepads: readonly Gamepad[]): number {
+    private readSource(source: AnalogInput.Source, gamepads: readonly (Gamepad | null)[]): number {
         switch (source.type) {
             case "keyboard":
                 return this.readKeyboard(source)
@@ -166,35 +173,41 @@ export class AnalogInput<Action extends string> implements AnalogInput.Reader<Ac
         return 0
     }
 
-    private readGamepadAxis(source: AnalogInput.AxisSource, gamepads: readonly Gamepad[]): number {
+    private readGamepadAxis(source: AnalogInput.AxisSource, gamepads: readonly (Gamepad | null)[]): number {
         const threshold = source.threshold ?? 0.1
         const scalar = source.scalar ?? 1
         const invert = source.invert ?? false
 
         let best = 0
 
-        for (const gamepad of gamepads) {
+        gamepads.forEach((gamepad, index) => {
+            if (!this.gamepadIndex.includes(index)) return
+            if (!gamepad) return
+
             const raw = gamepad.axes[source.axis]
-            if (raw === undefined) continue
+            if (raw === undefined) return
 
             const applied = Math.abs(raw) < threshold ? 0 : raw
 
             if (Math.abs(applied) > Math.abs(best)) {
                 best = applied
             }
-        }
+        })
 
         const signed = invert ? -best : best
         return this.clamp(signed * scalar)
     }
 
-    private readGamepadButton(source: AnalogInput.ButtonSource, gamepads: readonly Gamepad[]): number {
+    private readGamepadButton(source: AnalogInput.ButtonSource, gamepads: readonly (Gamepad | null)[]): number {
         const threshold = source.threshold ?? 0
         const scalar = source.scalar ?? 1
 
         let best = 0
 
-        for (const gamepad of gamepads) {
+        gamepads.forEach((gamepad, index) => {
+            if (!this.gamepadIndex.includes(index)) return
+            if (!gamepad) return
+
             const positiveButton = gamepad.buttons[source.positive]
             const positiveValue = positiveButton && positiveButton.value > threshold ? positiveButton.value : 0
 
@@ -208,7 +221,7 @@ export class AnalogInput<Action extends string> implements AnalogInput.Reader<Ac
             if (Math.abs(combined) > Math.abs(best)) {
                 best = combined
             }
-        }
+        })
 
         return this.clamp(best * scalar)
     }
@@ -220,10 +233,10 @@ export class AnalogInput<Action extends string> implements AnalogInput.Reader<Ac
     }
 
     private onKeyDown = (e: KeyboardEvent) => {
-        this.pressedKeys.add(e.code as Keys)
+        this.pressedKeys.add(e.code as KeyboardEventCode)
     }
 
     private onKeyUp = (e: KeyboardEvent) => {
-        this.pressedKeys.delete(e.code as Keys)
+        this.pressedKeys.delete(e.code as KeyboardEventCode)
     }
 }
