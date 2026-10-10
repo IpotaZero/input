@@ -9,9 +9,9 @@ export var SourceKey;
             case "keyboard":
                 return `keyboard:${source.code}`;
             case "gamepad-button":
-                return `gamepad-button:${source.index}`;
+                return `gamepad-button:${source.index}:${source.threshold ?? 0.5}`;
             case "gamepad-axis":
-                return `gamepad-axis:${source.index}:${source.direction}`;
+                return `gamepad-axis:${source.index}:${source.direction}:${source.threshold ?? 0.5}`;
         }
     }
     SourceKey.toKey = toKey;

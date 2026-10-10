@@ -118,34 +118,43 @@ export class DigitalInput<Action extends string> implements DigitalInput.Reader<
     }
 
     private processGamepadInput(gamepad: Gamepad) {
-        gamepad.buttons.forEach((button, index) => {
-            const key = SourceKey.toKey({ type: "gamepad-button", index })
+        for (const sources of this.config.values()) {
+            for (const source of sources) {
+                if (source.type === "keyboard") continue
 
-            if (!this.keyToActions.has(key)) return
+                const key = SourceKey.toKey(source)
+                if (!this.keyToActions.has(key)) continue
 
-            if (button.pressed) {
-                this.press(key)
-            } else {
-                this.release(key)
+                if (source.type === "gamepad-button") {
+                    const button = gamepad.buttons[source.index]
+                    const threshold = source.threshold ?? 0.5
+                    const isPressed = (button?.value ?? 0) >= threshold || button?.pressed === true
+                    if (isPressed) {
+                        this.press(key)
+                    } else {
+                        this.release(key)
+                    }
+                    continue
+                }
+
+                const threshold = source.threshold ?? 0.5
+                const value = gamepad.axes[source.index] ?? 0
+                const positiveValue = Math.max(value, 0)
+                const negativeValue = Math.max(-value, 0)
+
+                if (source.direction === "positive") {
+                    if (positiveValue >= threshold) {
+                        this.press(key)
+                    } else {
+                        this.release(key)
+                    }
+                } else if (negativeValue >= threshold) {
+                    this.press(key)
+                } else {
+                    this.release(key)
+                }
             }
-        })
-
-        gamepad.axes.forEach((axis, index) => {
-            const positiveKey = SourceKey.toKey({ type: "gamepad-axis", index, direction: "positive" })
-            const negativeKey = SourceKey.toKey({ type: "gamepad-axis", index, direction: "negative" })
-            if (!this.keyToActions.has(positiveKey) && !this.keyToActions.has(negativeKey)) return
-
-            if (axis > 0.5) {
-                this.press(positiveKey)
-                this.release(negativeKey)
-            } else if (axis < -0.5) {
-                this.press(negativeKey)
-                this.release(positiveKey)
-            } else {
-                this.release(positiveKey)
-                this.release(negativeKey)
-            }
-        })
+        }
     }
 
     /**押されているか? */

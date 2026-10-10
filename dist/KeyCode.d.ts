@@ -9,10 +9,12 @@ export type Source = {
 } | {
     type: "gamepad-button";
     index: number;
+    threshold?: number;
 } | {
     type: "gamepad-axis";
     index: number;
     direction: "positive" | "negative";
+    threshold?: number;
 };
 export declare namespace SourceKey {
     /**
